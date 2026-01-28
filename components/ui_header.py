@@ -15,6 +15,6 @@ def render_header_card(header_results):
             if vuln_sites > 0:
                 st.warning(f"⚠️ {vuln_sites} Domain missing headers")
             else:
-                st.success("✅ Headers Lengkap!")
+                st.success("✅ Headers Complete!")
     else:
-        st.warning("Gagal scan headers atau data kosong.")
+        st.warning("Data empty or scan failed.")

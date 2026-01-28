@@ -7,6 +7,10 @@ def render_ssl_card(hasil_ssl):
     if hasil_ssl:
         df = pd.DataFrame(hasil_ssl)
         
+        # Ngehilangin kolom vuln_name yang gak perlu ditampilin
+        if 'vuln_name' in df.columns:
+            df = df.drop(columns=['vuln_name'])
+
         # Rename kolom: Tampilkan URL, Status, Sisa Hari, Expired Date, Detail
         df_display = df.rename(columns={
             "URL": "Target Domain",
@@ -33,11 +37,14 @@ def render_ssl_card(hasil_ssl):
         # Summary Statistik
         if 'Status' in df.columns:
             # Hitung yang statusnya 'Error' atau 'EXPIRED'
-            error_count = df[df['Status'].str.lower().isin(['error', 'expired'])].shape[0]
+            vuln_count = df[df['Status'].str.lower().isin(['expired'])].shape[0]
+            err_count = df[df['Status'].str.lower().isin(['error'])].shape[0]
             
-            if error_count > 0:
-                st.error(f"⚠️ {error_count} Masalah ditemukan (Error/Expired)!")
+            if vuln_count > 0:
+                st.error(f"⚠️ {vuln_count} Domain Expired!")
+            elif err_count > 0:
+                st.error(f"⚠️ {err_count} Domain Error!")
             else:
-                st.success("✅ Semua SSL Valid")
+                st.success("✅ All SSL Valid")
     else:
-        st.warning("Tidak ada data SSL atau gagal scan.")
+        st.warning("No SSL data or scan failed")

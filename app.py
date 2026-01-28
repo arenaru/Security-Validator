@@ -1,7 +1,7 @@
 import streamlit as st
 import os
 
-# Import UI
+# Import UI Components
 from components.ui_ssl import render_ssl_card
 from components.ui_hsts import render_hsts_card
 from components.ui_cookie import render_cookie_card
@@ -11,27 +11,23 @@ from components.ui_nodejs import render_node_card
 
 # Import Engine
 from utils.scanner_engine import start_scanning_engine
+from utils.pdf_gen import generate_report
 
 st.set_page_config(page_title="VA Dashboard Pro", layout="wide")
 st.title("⚡ Security Validator")
 
 def load_css(file_name):
-    with open(file_name) as f:
-        st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
+    if os.path.exists(file_name):
+        with open(file_name) as f:
+            st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
 
-# Panggil CSS eksternal
-try:
-    load_css("static/style.css")
-except FileNotFoundError:
-    st.error("File CSS tidak ditemukan! Pastikan folder 'static/style.css' ada.")
+load_css("static/style.css")
 
-# --- 1. SIDEBAR ---
+# --- SIDEBAR ---
 with st.sidebar:
-    st.header("⚙️ Konfigurasi Scan")
+    st.header("⚙️ Scan Configuration")
     select_all = st.checkbox("Choose All", value=False)
     
-    # Dictionary: Label di UI -> Key yang dikenali Engine
-    # (Pastikan string di kanan SAMA PERSIS dengan if di scanner_engine.py)
     scan_map = {
         "SSL Certificate": "SSL Certificate Check",
         "HSTS Security": "HSTS Security Check",
@@ -42,72 +38,73 @@ with st.sidebar:
     }
     
     selected_scans = []
-    
-    # Loop bikin checkbox otomatis
     for label, engine_key in scan_map.items():
-        # Kalau Select All dicentang, default-nya True. Kalau enggak, False.
-        is_checked = st.checkbox(label, value=select_all)
-        if is_checked:
+        if st.checkbox(label, value=select_all):
             selected_scans.append(engine_key)
 
-# --- INPUT USER ---
+# --- INPUT ---
 with st.form("scanner_form"):
-    input_text = st.text_area("Target List (Satu per baris):", height=150)
-    submitted = st.form_submit_button("🚀 Mulai Scan")
+    input_text = st.text_area("Target List:", height=150, placeholder="example.com\n192.168.1.1")
+    submitted = st.form_submit_button("🚀 Run Scan")
 
-# --- MAIN LOGIC ---
+if "scan_results" not in st.session_state:
+    st.session_state["scan_results"] = None
+
+# --- SCANNING PROCESS ---
 if submitted:
     if not input_text.strip():
-        st.warning("⚠️ Isi target dulu bos!")
+        st.warning("⚠️ Isi target dulu!")
     elif not selected_scans:
-        st.warning("⚠️ Pilih minimal satu modul scan!")
+        st.warning("⚠️ Pilih minimal satu modul!")
     else:
-        # Prepare Data
-        temp_file = "temp_list.txt"
-        with open(temp_file, "w") as f: f.write(input_text)
         targets_list = [t.strip() for t in input_text.splitlines() if t.strip()]
-
-        # PANGGIL ENGINE
-        with st.spinner("Sedang memproses..."):
-            # Kita lempar data ke file sebelah, trus tunggu hasilnya balik
-            scan_results = start_scanning_engine(targets_list, selected_scans, temp_file)
-
-        st.success("✅ Scanning Selesai!")
         
-        # DYNAMIC RENDERING BASED ON AVAILABLE DATA (DYNAMIC POSITIONING)
-        active_modules = []
+        temp_file = "temp_list.txt"
+        with open(temp_file, "w") as f: 
+            f.write("\n".join(targets_list))
+        
+        with st.spinner("Scanning..."):
+            st.session_state["scan_results"] = start_scanning_engine(targets_list, selected_scans, temp_file)
+        
+        st.success("✅ Scanning Done!")
 
-        # Cek satu-satu, kalau ada datanya, masukkan ke antrian render
-        # Urutan append menentukan urutan tampilan
-        if scan_results["ssl"]: 
-            active_modules.append({"func": render_ssl_card, "data": scan_results["ssl"]})
-            
-        if scan_results["hsts"]: 
-            active_modules.append({"func": render_hsts_card, "data": scan_results["hsts"]})
-            
-        if scan_results["header"]: 
-            active_modules.append({"func": render_header_card, "data": scan_results["header"]})
-            
-        if scan_results["cookie"]: 
-            active_modules.append({"func": render_cookie_card, "data": scan_results["cookie"]})
-            
-        if scan_results["laravel"]: 
-            active_modules.append({"func": render_laravel_card, "data": scan_results["laravel"]})
-            
-        if scan_results["node"]: 
-            active_modules.append({"func": render_node_card, "data": scan_results["node"]})
+# --- DISPLAY RESULTS ---
+if st.session_state["scan_results"]:
+    scan_results = st.session_state["scan_results"]
+    
+    # Mapping Data Engine ke UI Component
+    # Format Engine Baru: { "SSL Certificate Check": [...], ... }
+    ui_modules = [
+        {"key": "SSL Certificate Check", "func": render_ssl_card},
+        {"key": "HSTS Security Check", "func": render_hsts_card},
+        {"key": "Security Headers Check", "func": render_header_card},
+        {"key": "Cookie Secure Flag (Bash)", "func": render_cookie_card},
+        {"key": "Laravel Debug Mode", "func": render_laravel_card},
+        {"key": "Node.js Debug Mode", "func": render_node_card}
+    ]
 
-        # --- RENDER KE 3 KOLOM SECARA BERURUTAN ---
-        if active_modules:
-            cols = st.columns(3) # Bikin 3 slot kolom
-            
-            for i, module in enumerate(active_modules):
-                # Logic Modulo: 
-                # Item ke-0 masuk Col 0
-                # Item ke-1 masuk Col 1
-                # Item ke-2 masuk Col 2
-                # Item ke-3 masuk Col 0 lagi (Baris baru otomatis)
-                with cols[i % 3]:
-                    module["func"](module["data"])
-        else:
-            st.warning("Scan selesai tapi tidak ada data yang dihasilkan.")
+    active_modules = [m for m in ui_modules if scan_results.get(m["key"]) is not None]
+
+    if active_modules:
+        cols = st.columns(3)
+        for i, module in enumerate(active_modules):
+            with cols[i % 3]:
+                data = scan_results[module["key"]]
+                # Render hanya jika data tidak kosong/None
+                if data: 
+                    module["func"](data)
+                else:
+                    st.info(f"No results for {module['key']}")
+    
+    # --- PDF EXPORT ---
+    st.write("---")
+    st.subheader("📄 Export Report")
+    
+    pdf_bytes = generate_report(scan_results)
+    
+    st.download_button(
+        label="📥 Download PDF Report",
+        data=pdf_bytes,
+        file_name="VA_Scan_Report.pdf",
+        mime="application/pdf"
+    )

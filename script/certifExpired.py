@@ -24,7 +24,8 @@ def cek_ssl_expiry(domain, port=443, warning_days=30):
         "Status": "Error",       # Default Status
         "Sisa Hari": "-",
         "Expired Date": "-",
-        "Detail": "-"            # <--- KOLOM BARU
+        "Detail": "-",            # <--- KOLOM BARU
+        "vuln_name": None
     }
     
     try:
@@ -47,21 +48,24 @@ def cek_ssl_expiry(domain, port=443, warning_days=30):
                 if days_remaining < 0:
                     result["Status"] = "EXPIRED"
                     result["Detail"] = "Certificate has expired"
+                    result["vuln_name"] = "SSL Certificate Expired"
                 elif days_remaining < warning_days:
                     result["Status"] = "WARNING"
                     result["Detail"] = f"Expiring soon ({days_remaining} days)"
+                    result["vuln_name"] = "SSL Certificate Expired"
                 else:
                     result["Status"] = "VALID"
                     result["Detail"] = "Certificate is valid"
                     
     # --- MENANGKAP PENYEBAB ERROR ---
     except ssl.CertificateError as e:
-        # Ini error yang kemarin kamu temui (Hostname Mismatch)
         result["Status"] = "Error"
-        result["Detail"] = "Hostname Mismatch (Salah Sertifikat)" 
+        result["Detail"] = "Hostname Mismatch"
+        result["vuln_name"] = "SSL Certificate Name Hostname Missmatch" # [MATCH ACUNETIX]
     except ssl.SSLError as e:
         result["Status"] = "Error"
-        result["Detail"] = "SSL Handshake Failed / Self-Signed"
+        result["Detail"] = "Self-Signed / Handshake Failed"
+        result["vuln_name"] = "SSL Self-Signed" # [MATCH ACUNETIX]
     except socket.timeout:
         result["Status"] = "Error"
         result["Detail"] = "Connection Timeout (Web Down)"

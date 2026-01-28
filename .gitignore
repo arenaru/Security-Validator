@@ -1,2 +1,3 @@
 *.txt
-*.cpython-313.pyc
+!requirements.txt
+__pycache__/

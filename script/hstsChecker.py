@@ -62,7 +62,7 @@ def check_hsts(url):
             # ROBUSTNESS CHECK: Ensure max-age is not 0
             if "max-age=0" in hsts_header.lower():
                 print(f"{Color.RED}[FAIL] {target} -> HSTS disabled (max-age=0){Color.RESET}")
-                save_to_file(FILE_WITHOUT_HSTS, f"{target} | Final: {final_url} | Reason: max-age=0")
+                save_to_file(FILE_WITHOUT_HSTS, f"{target} | Final: {final_url} | Reason: HSTS Not Enabled (max-age=0)")
             else:
                 print(f"{Color.GREEN}[PASS] {target} -> HSTS Found{Color.RESET}")
                 save_to_file(FILE_WITH_HSTS, f"{target} | Final: {final_url} | Header: {hsts_header}")
@@ -110,15 +110,22 @@ def run_hsts_scan(targets):
             hsts = r.headers.get('Strict-Transport-Security')
             
             if hsts:
-                # Cek edge case max-age=0
                 if "max-age=0" in hsts.lower():
-                     return False, f"{target} | HSTS Disabled (max-age=0)"
+                     # [VULN] HSTS ada tapi dimatikan (max-age=0)
+                     return False, f"{target} | HTTP Strict Transport Security (HSTS) Policy Not Enabled (max-age=0)"
+                # [SECURE]
                 return True, f"{target} | {hsts}"
             else:
-                return False, f"{target} | No Header"
+                # [VULN] HSTS Hilang
+                return False, f"{target} | HTTP Strict Transport Security (HSTS) Policy Not Enabled"
+        
+        # --- ERROR HANDLING SPESIFIK ---
+        except requests.exceptions.Timeout:
+            return False, f"{target} | ERROR | Connection Timeout"
+        except requests.exceptions.ConnectionError:
+            return False, f"{target} | ERROR | Connection Refused / Down"
         except Exception as e:
-            # Persingkat pesan error biar tabel ga berantakan
-            return False, f"{target} | Error/Unreachable"
+            return False, f"{target} | ERROR | {str(e)}"
 
     # --- JALANIN SECARA PARALLEL (MULTITHREADING) ---
     with concurrent.futures.ThreadPoolExecutor(max_workers=THREADS) as executor:

@@ -10,7 +10,8 @@ if [[ ! -f "$INPUT_FILE" ]]; then
 fi
 
 check_insecure_cookie() {
-  raw_domain=$1
+  # Clean newline characters dari input
+  raw_domain=$(echo "$1" | tr -d '\r\n')
   domain=$(echo "$raw_domain" | sed -E 's~^https?://~~; s~/$~~')
   
   # Target URL
@@ -18,7 +19,7 @@ check_insecure_cookie() {
 
   # Eksekusi CURL (Timeout 3s connect, 5s max)
   # Kita ambil Header saja (-I atau -D)
-  response_headers=$(curl -s -k -L -D - -o /dev/null -A "Mozilla/5.0" --connect-timeout 3 --max-time 5 "$target_url")
+  response_headers=$(curl -s -k -L -D - -o /dev/null -A "Mozilla/5.0" --connect-timeout 3 --max-time 5 "$target_url" 2>/dev/null)
   curl_status=$?
 
   # 1. Cek Koneksi
@@ -39,7 +40,7 @@ check_insecure_cookie() {
     if [ -n "$insecure" ]; then
       # Ada cookie yang tidak secure -> VULNERABLE
       # Kita kirim output bersih tanpa warna biar CSV aman
-      echo "$target_url|VULNERABLE|Insecure Cookies Found"
+      echo "$target_url|VULNERABLE|Cookie Without Secure Flag"
     else
       # Semua cookie aman
       echo "$target_url|SAFE|All Cookies are Secure"

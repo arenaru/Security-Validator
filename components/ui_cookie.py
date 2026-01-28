@@ -27,10 +27,14 @@ def render_cookie_card(raw_output_bash):
             st.dataframe(df_cookie, use_container_width=True)
             
             vuln_count = df_cookie[df_cookie['Status'] == 'VULNERABLE'].shape[0]
+            err_count = df_cookie[df_cookie['Status'] == 'ERROR'].shape[0]
+
             if vuln_count > 0:
                 st.error(f"⚠️ {vuln_count} Vulnerable Cookies Found!")
+            elif err_count > 0:
+                st.error(f"⚠️ {err_count} Domain Error!")
             else:
-                st.success("✅ Semua Cookies Aman")
+                st.success("✅ All Cookies Secure!")
         else:
             st.warning("Format output bash tidak sesuai (Cek script bash).")
             st.code(raw_output_bash) # Debugging: Tampilkan raw output

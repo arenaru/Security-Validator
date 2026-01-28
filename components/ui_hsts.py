@@ -5,43 +5,66 @@ def render_hsts_card(hsts_data):
     st.subheader("🌐 HSTS Check")
     
     if hsts_data:
-        # Unpack tuple yang dikirim dari main_app
+        # Unpack tuple dari scanner engine
         aman_list, gagal_list = hsts_data
         
-        # --- KONVERSI KE DATAFRAME AGAR BISA DOWNLOAD CSV ---
         combined_data = []
 
-        # Parsing list Aman
+        # 1. Parsing List AMAN (SECURE)
         for item in aman_list:
-            # Format item dari backend: "url | header_value"
             parts = item.split(" | ")
             combined_data.append({
-                "URL": parts[0],
+                "URL": parts[0].strip(),
                 "Status": "SECURE",
-                "Details": parts[1] if len(parts) > 1 else "OK"
+                "Details": parts[1].strip() if len(parts) > 1 else "OK"
             })
 
-        # Parsing list Gagal
+        # 2. Parsing List GAGAL (INSECURE vs ERROR)
         for item in gagal_list:
             parts = item.split(" | ")
-            combined_data.append({
-                "URL": parts[0],
-                "Status": "INSECURE",
-                "Details": parts[1] if len(parts) > 1 else "Missing/Error"
-            })
+            domain = parts[0].strip()
+            
+            # Cek apakah ini ERROR Koneksi atau Vulnerability
+            # Format Scanner: "URL | ERROR | Reason"
+            if len(parts) >= 3 and parts[1].strip() == "ERROR":
+                combined_data.append({
+                    "URL": domain,
+                    "Status": "ERROR",  # Status Khusus Error
+                    "Details": parts[2].strip() # Ambil pesan errornya (Timeout/Refused)
+                })
+            else:
+                # Format Scanner: "URL | HSTS Not Enabled"
+                combined_data.append({
+                    "URL": domain,
+                    "Status": "INSECURE",
+                    "Details": parts[1].strip() if len(parts) > 1 else "Missing"
+                })
 
-        # Render Tabel
+        # --- RENDER TABLE ---
         if combined_data:
             df = pd.DataFrame(combined_data)
+            
             st.dataframe(df, use_container_width=True)
             
-            # Statistik
+            # --- SUMMARY METRICS ---
+            # Hitung jumlah berdasarkan Status
+            secure_count = df[df['Status'] == 'SECURE'].shape[0]
             insecure_count = df[df['Status'] == 'INSECURE'].shape[0]
-            if insecure_count > 0:
-                st.error(f"⚠️ {insecure_count} Domain tidak aktif HSTS")
-            else:
-                st.success("✅ Semua domain aktif HSTS")
-        else:
-            st.warning("Hasil scan HSTS kosong.")
+            error_count = df[df['Status'] == 'ERROR'].shape[0]
+
+            # Tampilkan Summary
+            if 'Status' in df.columns:
+                # Hitung jumlah masalah (INSECURE atau ERROR)
+                problem_count = df[df['Status'].isin(['INSECURE', 'ERROR'])].shape[0]
+                
+                if problem_count > 0:
+                    # Tampilkan detail jumlah di dalam pesan error
+                    vuln_count = df[df['Status'] == 'INSECURE'].shape[0]
+                    # err_count = df[df['Status'] == 'ERROR'].shape[0]
+                    
+                    st.error(f"⚠️{vuln_count} Domain not Activate HSTS!")
+                else:
+                    st.success("✅ All Domain are Safe (HSTS Enabled)")
+                
     else:
-        st.error("Gagal menerima data HSTS.")
+        st.info("Belum ada data HSTS.")

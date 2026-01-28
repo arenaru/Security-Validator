@@ -2,7 +2,7 @@ import concurrent.futures
 import subprocess
 import os
 
-# Import script worker (Logic Masak)
+# Import script worker
 from script.certifExpired import run_ssl_scan
 from script.hstsChecker import run_hsts_scan
 from script.headerCheck import check_security_headers
@@ -20,45 +20,40 @@ def run_bash_worker(file_path):
 
 def start_scanning_engine(targets_list, selected_scans, temp_file_path):
     """
-    Fungsi ini menerima Input User, menjalankan Scanning Paralel,
-    dan mengembalikan Dictionary berisi hasil scan.
+    Menjalankan scanning paralel dan mengembalikan dictionary berdasarkan Scan Type.
+    Format Return: { "SSL Certificate Check": [...data...], "HSTS...": ... }
     """
     
-    # Penampung Hasil (Dictionary biar rapi)
-    results = {
-        "ssl": None,
-        "hsts": None,
-        "header": None,
-        "cookie": None,
-        "laravel": None,
-        "node": None
-    }
-
+    scan_results = {}
+    
     # JALANIN ENGINE (The Kitchen)
     with concurrent.futures.ThreadPoolExecutor() as executor:
         futures = {}
         
-        # Cek berdasarkan String yang dikirim dari App.py
         if "SSL Certificate Check" in selected_scans:
-            futures["ssl"] = executor.submit(run_ssl_scan, temp_file_path)
+            futures["SSL Certificate Check"] = executor.submit(run_ssl_scan, temp_file_path)
         
         if "HSTS Security Check" in selected_scans:
-            futures["hsts"] = executor.submit(run_hsts_scan, targets_list)
+            futures["HSTS Security Check"] = executor.submit(run_hsts_scan, targets_list)
             
         if "Security Headers Check" in selected_scans:
-            futures["header"] = executor.submit(check_security_headers, targets_list)
+            futures["Security Headers Check"] = executor.submit(check_security_headers, targets_list)
         
         if "Cookie Secure Flag (Bash)" in selected_scans:
-            futures["cookie"] = executor.submit(run_bash_worker, temp_file_path)
+            futures["Cookie Secure Flag (Bash)"] = executor.submit(run_bash_worker, temp_file_path)
         
         if "Laravel Debug Mode" in selected_scans:
-            futures["laravel"] = executor.submit(run_laravel_scan, targets_list)
+            futures["Laravel Debug Mode"] = executor.submit(run_laravel_scan, targets_list)
             
         if "Node.js Debug Mode" in selected_scans:
-            futures["node"] = executor.submit(run_node_scan, targets_list)
+            futures["Node.js Debug Mode"] = executor.submit(run_node_scan, targets_list)
 
-        # AMBIL HASIL MASAKAN
-        for key, future in futures.items():
-            results[key] = future.result()
+        # AMBIL HASIL
+        for scan_type, future in futures.items():
+            try:
+                scan_results[scan_type] = future.result()
+            except Exception as e:
+                scan_results[scan_type] = None
+                print(f"[Error] {scan_type} failed: {e}")
             
-    return results
+    return scan_results

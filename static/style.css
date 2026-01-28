@@ -16,3 +16,17 @@ div[data-testid="stCheckbox"]:hover div[role="checkbox"][aria-checked="true"] {
 [data-testid="stCheckbox"] input:checked {
     accent-color: #2196F3 !important;
 }
+
+.stTextArea textarea {
+    font-size: 14px;
+}
+
+textarea::placeholder {
+    font-style: italic;
+    opacity: 0.7;
+    font-size: 13px;
+}
+
+textarea:focus::placeholder {
+    opacity: 0;
+}
