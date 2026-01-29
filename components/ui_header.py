@@ -13,7 +13,7 @@ def render_header_card(header_results):
             vuln_sites = df_headers[df_headers['Status'] == 'VULNERABLE'].shape[0]
             
             if vuln_sites > 0:
-                st.warning(f"⚠️ {vuln_sites} Domain missing headers")
+                st.warning(f"⚠️ {vuln_sites} Domain(s) missing headers")
             else:
                 st.success("✅ Headers Complete!")
     else:

@@ -32,7 +32,7 @@ def render_cookie_card(raw_output_bash):
             if vuln_count > 0:
                 st.error(f"⚠️ {vuln_count} Vulnerable Cookies Found!")
             elif err_count > 0:
-                st.error(f"⚠️ {err_count} Domain Error!")
+                st.error(f"⚠️ {err_count} Domain(s) Error!")
             else:
                 st.success("✅ All Cookies Secure!")
         else:

@@ -1,13 +1,21 @@
 import subprocess
 import shutil
+from urllib.parse import urlparse
 
 def check_sslv3(target):
     if not shutil.which("nmap"):
         return {"target": target, "status": "ERROR", "details": "Nmap not installed"}
 
+    # Parse domain from URL
+    if "://" not in target:
+        target = "https://" + target
+    
+    parsed = urlparse(target)
+    domain_only = parsed.netloc # Ini cuma ambil "example.com"
+
     try:
         # Scan khusus cipher enum
-        cmd = ["nmap", "--script", "ssl-enum-ciphers", "-p", "443", "-Pn", target]
+        cmd = ["nmap", "--script", "ssl-enum-ciphers", "-p", "443", "-Pn", domain_only]
         process = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
         output = process.stdout
         
@@ -15,7 +23,8 @@ def check_sslv3(target):
             return {
                 "target": target,
                 "status": "INSECURE",
-                "details": "SSLv3 Detected (POODLE Vulnerability)"
+                "details": "SSLv3 Detected (Deprecated)",
+                "vuln_name": "Insecure Transportation Security Protocol Supported (SSLv3)"
             }
         elif "TLSv" in output: # Koneksi SSL berhasil, tapi bukan SSLv3
             return {

@@ -40,7 +40,7 @@ check_insecure_cookie() {
     if [ -n "$insecure" ]; then
       # Ada cookie yang tidak secure -> VULNERABLE
       # Kita kirim output bersih tanpa warna biar CSV aman
-      echo "$target_url|VULNERABLE|Cookie Without Secure Flag"
+      echo "$target_url|VULNERABLE|Cookies Not Marked as Secure"
     else
       # Semua cookie aman
       echo "$target_url|SAFE|All Cookies are Secure"

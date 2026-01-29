@@ -36,7 +36,7 @@ def render_laravel_card(data):
         vuln_count = sum(1 for item in data if item['status'] in ['WARNING', 'CRITICAL'])
         
         if vuln_count > 0:
-            st.error(f"⚠️ {vuln_count} Domain Activate Laravel Debug Mode!")
+            st.error(f"⚠️ {vuln_count} Domain(s) Activate Laravel Debug Mode!")
         else:
             st.success("✅ All target are safe from Debug Exposure")
     else:

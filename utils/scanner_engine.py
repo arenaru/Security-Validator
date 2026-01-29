@@ -11,6 +11,7 @@ from script.nodeDebug import run_node_scan
 from script.sslv3 import check_sslv3
 from script.tlsv10 import check_tls10
 from script.tlsv11 import check_tls11
+from script.phpVersion import run_php_scan
 
 # Helper function untuk Bash
 def run_bash_worker(file_path):
@@ -59,6 +60,9 @@ def start_scanning_engine(targets_list, selected_scans, temp_file_path):
             
         if "Node.js Debug Mode" in selected_scans:
             futures["Node.js Debug Mode"] = executor.submit(run_node_scan, targets_list)
+        
+        if "PHP Version Disclosure" in selected_scans:
+            futures["PHP Version Disclosure"] = executor.submit(run_php_scan, targets_list)
 
         # AMBIL HASIL
         for scan_type, future in futures.items():

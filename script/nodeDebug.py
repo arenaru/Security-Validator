@@ -48,7 +48,8 @@ def scan_single_target(target):
         "URL": url,
         "status": "SECURE",
         "payload": "-",
-        "finding": "No Stack Trace exposed"
+        "finding": "No Stack Trace exposed",
+        "vuln_name": None # <--- Field Wajib untuk PDF Gen
     }
 
     methods_to_try = ["POST", "PUT", "GET"]
@@ -75,6 +76,9 @@ def scan_single_target(target):
                                 # Catat payload mana yang tembus
                                 result["payload"] = f"{method} (Body: '{payload}')"
                                 result["finding"] = f"Debug Trace Leak: {sig}"
+                                
+                                # Mapping ke nama standar Acunetix (High Severity)
+                                result["vuln_name"] = "Node.js Running in Development Mode"
                                 return result 
                 except:
                     continue 
@@ -82,6 +86,7 @@ def scan_single_target(target):
     except Exception as e:
         result["status"] = "ERROR"
         result["finding"] = str(e)
+        result["vuln_name"] = None
 
     return result
 

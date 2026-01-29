@@ -41,9 +41,9 @@ def render_ssl_card(hasil_ssl):
             err_count = df[df['Status'].str.lower().isin(['error'])].shape[0]
             
             if vuln_count > 0:
-                st.error(f"⚠️ {vuln_count} Domain Expired!")
+                st.error(f"⚠️ {vuln_count} Domain(s) Expired!")
             elif err_count > 0:
-                st.error(f"⚠️ {err_count} Domain Error!")
+                st.error(f"⚠️ {err_count} Domain(s) Error!")
             else:
                 st.success("✅ All SSL Valid")
     else:

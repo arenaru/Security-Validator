@@ -2,76 +2,56 @@ import json
 import os
 import streamlit as st
 
-# Lokasi file JSON hasil scraper (sesuai nama file yang kamu upload)
+# Lokasi file JSON hasil scraper
 SCRAPED_DB_FILE = os.path.join(os.path.dirname(__file__), 'acunetix_vulnerabilities.json')
-
-# --- MAPPING VITAL ---
-# Menjembatani nama output script scanner dengan severity Acunetix
-CUSTOM_OVERRIDES = {
-    # SSL & HSTS
-    "SSL Certificate Name Hostname Mismatch": "Medium",
-    "SSL Certificate Expired": "Medium",
-    "SSL Self-Signed": "Medium",
-    "HTTP Strict Transport Security (HSTS) Policy Not Enabled": "Medium",
-    "HSTS Not Enabled": "Medium",
-    
-    # SSL Version Detection
-    "SSLv3 Detected (POODLE Vulnerability)": "High",
-    "TLS 1.0 Detected (Deprecated)": "Medium",
-    "TLS 1.1 Detected (Deprecated)": "Medium",
-    
-    # Debug Modes
-    "Laravel Debug Mode Enabled": "Medium",
-    "Node.js Debug Mode Enabled": "Medium",
-    "Ignition RCE Exposed": "Critical",
-    
-    # Cookies & Headers
-    "Cookie Without Secure Flag": "Low",
-    "Missing Security Headers": "Low",
-    "Cookie Without HttpOnly Flag": "Low"
-}
 
 @st.cache_resource
 def load_severity_db():
+    """
+    Load database langsung dari file JSON tanpa mapping manual.
+    Disimpan dalam dictionary dengan key lowercase untuk pencarian yang case-insensitive.
+    """
     master_db = {}
     
-    # 1. LOAD JSON SCRAPER
     if os.path.exists(SCRAPED_DB_FILE):
         try:
             with open(SCRAPED_DB_FILE, 'r', encoding='utf-8') as f:
-                scraped_list = json.load(f)
-                for item in scraped_list:
-                    name = item.get("vulnerability_name")
-                    severity_raw = item.get("severity", "info")
-                    master_db[name] = severity_raw.capitalize()
+                data = json.load(f)
+                
+                # Loop semua item di JSON
+                for item in data:
+                    name = item.get('vulnerability_name', '').strip()
+                    severity = item.get('severity', 'Info').strip()
+                    
+                    if name:
+                        # Kita simpan key dalam lowercase agar pencarian tidak sensitif huruf besar/kecil
+                        # Value (Severity) kita format jadi Title Case (misal: "medium" -> "Medium")
+                        master_db[name.lower()] = severity.capitalize()
+                        
         except Exception as e:
-            print(f"[Warning] Gagal load JSON: {e}")
-
-    # 2. TIMPA DENGAN CUSTOM OVERRIDES (Prioritas Utama)
-    for name, severity in CUSTOM_OVERRIDES.items():
-        master_db[name] = severity
+            print(f"[ERROR] Gagal membaca database vulnerabilities: {e}")
+    else:
+        print(f"[WARNING] File database tidak ditemukan di: {SCRAPED_DB_FILE}")
         
     return master_db
 
 def get_vuln_severity(vuln_name):
-    """Mengembalikan string Severity (Critical, High, Medium, Low, Info)"""
-    if not vuln_name: return "Informational"
-
+    """
+    Mencari severity berdasarkan nama vulnerability.
+    Langsung lookup ke database JSON yang sudah diload.
+    """
+    if not vuln_name:
+        return "Info"
+        
     db = load_severity_db()
     
-    # 1. Cek Exact Match
-    if vuln_name in db:
-        return db[vuln_name]
+    # Normalisasi input agar cocok dengan key database (lowercase & strip)
+    key = str(vuln_name).strip().lower()
     
-    # 2. Cek Case Insensitive
-    vuln_lower = vuln_name.lower()
-    for db_name, severity in db.items():
-        if db_name.lower() == vuln_lower:
-            return severity
-            
-    # 3. Fuzzy Match (Cari sebagian string)
-    for db_name, severity in db.items():
-        if vuln_name.lower() in db_name.lower():
-            return severity
-
-    return "Informational"
+    # 1. Direct Lookup (Cepat & Akurat)
+    if key in db:
+        return db[key]
+    
+    # 2. Fallback: Jika tidak ketemu, return Info
+    # Karena script scanner sudah disinkronkan namanya, harusnya selalu ketemu.
+    return "Info"

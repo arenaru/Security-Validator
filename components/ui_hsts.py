@@ -62,7 +62,7 @@ def render_hsts_card(hsts_data):
                     vuln_count = df[df['Status'] == 'INSECURE'].shape[0]
                     # err_count = df[df['Status'] == 'ERROR'].shape[0]
                     
-                    st.error(f"⚠️{vuln_count} Domain not Activate HSTS!")
+                    st.error(f"⚠️{vuln_count} Domain(s) not Activate HSTS!")
                 else:
                     st.success("✅ All Domain are Safe (HSTS Enabled)")
                 

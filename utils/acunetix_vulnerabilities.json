@@ -114211,7 +114211,7 @@
     },
     {
         "vulnerability_name": "Insecure Transportation Security Protocol Supported (TLS 1.1)",
-        "severity": "info",
+        "severity": "medium",
         "reference_link": "https://www.acunetix.com/vulnerabilities/web/insecure-transportation-security-protocol-supported-tls-1-1/"
     },
     {

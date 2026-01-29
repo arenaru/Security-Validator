@@ -15,11 +15,11 @@ HEADERS = {
 def get_signatures():
     return [
         "Whoops! There was an error.",
-        "Spatie\\\\Ignition",
-        "Facade\\\\Ignition",
+        "Spatie\\Ignition",
+        "Facade\\Ignition",
         "window.ignition",
         "vendor/laravel/framework",
-        "Illuminate\\\\Routing\\\\Pipeline",
+        "Illuminate\\Routing\\Pipeline",
         "MethodNotAllowedHttpException",
         "NotFoundHttpException",
         "can_execute_commands",
@@ -39,12 +39,13 @@ def scan_single_target(target):
     url = fix_url(target)
     signatures = get_signatures()
     
-    # Default Result: Tambahkan key 'payload' kosong
+    # Default Result
     result = {
         "URL": url,
         "status": "SECURE",
-        "payload": "-",  # <--- KOLOM BARU
-        "finding": "Debug mode disabled"
+        "payload": "-",
+        "finding": "Debug mode disabled",
+        "vuln_name": None # <--- Field Wajib untuk PDF Gen
     }
 
     endpoints = [
@@ -56,19 +57,22 @@ def scan_single_target(target):
     methods = ['PUT', 'PATCH', 'DELETE', 'POST']
 
     try:
-        # --- PHASE 1: Ignition RCE Check ---
+        # --- PHASE 1: Ignition RCE Check (CRITICAL) ---
         try:
             target_ign = f"{url}/_ignition/health-check"
             r_health = requests.get(target_ign, headers=HEADERS, timeout=TIMEOUT, verify=False)
             if r_health.status_code == 200 and "can_execute_commands" in r_health.text:
                 result["status"] = "CRITICAL"
-                result["payload"] = f"GET {target_ign}" # <--- Catat Payload
+                result["payload"] = f"GET {target_ign}" 
                 result["finding"] = "Ignition RCE Exposed"
+                # RCE biasanya efek dari Debug Mode yang terekspos juga
+                # Kita mapping ke nama standar agar kedetect Severity-nya
+                result["vuln_name"] = "Laravel debug mode enabled" 
                 return result
         except:
             pass
 
-        # --- PHASE 2: Method Fuzzing ---
+        # --- PHASE 2: Method Fuzzing (WARNING) ---
         for endpoint in endpoints:
             for method in methods:
                 try:
@@ -83,26 +87,28 @@ def scan_single_target(target):
                     for sig in signatures:
                         if sig in resp.text:
                             result["status"] = "WARNING"
-                            # Catat method dan path spesifik yang bocor
                             path_only = endpoint.replace(url, "")
                             if path_only == "": path_only = "/"
                             
-                            result["payload"] = f"{method} {path_only}" # <--- Catat Payload (misal: PUT /index.php)
+                            result["payload"] = f"{method} {path_only}"
                             result["finding"] = f"Signature Found: {sig}"
+                            # Mapping ke nama standar Acunetix
+                            result["vuln_name"] = "Laravel debug mode enabled"
                             return result 
                 except:
                     continue
         
-        # --- PHASE 3: 404 Trigger ---
+        # --- PHASE 3: 404 Trigger (WARNING) ---
         try:
-            # Generate random path
             bad_path = "/halaman_ini_pasti_tidak_ada_12345"
             r_404 = requests.get(f"{url}{bad_path}", headers=HEADERS, timeout=TIMEOUT, verify=False)
             for sig in signatures:
                 if sig in r_404.text:
                     result["status"] = "WARNING"
-                    result["payload"] = f"GET {bad_path}" # <--- Catat Payload
+                    result["payload"] = f"GET {bad_path}"
                     result["finding"] = f"Signature Found: {sig}"
+                    # Mapping ke nama standar Acunetix
+                    result["vuln_name"] = "Laravel debug mode enabled"
                     return result
         except:
             pass
@@ -110,6 +116,7 @@ def scan_single_target(target):
     except Exception as e:
         result["status"] = "ERROR"
         result["finding"] = str(e)
+        result["vuln_name"] = None
 
     return result
 

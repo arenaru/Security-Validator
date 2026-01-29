@@ -48,33 +48,37 @@ def cek_ssl_expiry(domain, port=443, warning_days=30):
                 if days_remaining < 0:
                     result["Status"] = "EXPIRED"
                     result["Detail"] = "Certificate has expired"
-                    result["vuln_name"] = "SSL Certificate Expired"
+                    result["vuln_name"] = "Invalid SSL Certificate" # Match with Acunetix
                 elif days_remaining < warning_days:
                     result["Status"] = "WARNING"
                     result["Detail"] = f"Expiring soon ({days_remaining} days)"
-                    result["vuln_name"] = "SSL Certificate Expired"
+                    result["vuln_name"] = "SSL Certificate Is About To Expire" # Match with Acunetix
                 else:
                     result["Status"] = "VALID"
                     result["Detail"] = "Certificate is valid"
+                    result["vuln_name"] = None # No vulnerability
                     
-    # --- MENANGKAP PENYEBAB ERROR ---
+    # --- CERTIFICATE ERROR HANDLING ---
     except ssl.CertificateError as e:
-        result["Status"] = "Error"
+        result["Status"] = "WARNING"
         result["Detail"] = "Hostname Mismatch"
-        result["vuln_name"] = "SSL Certificate Name Hostname Missmatch" # [MATCH ACUNETIX]
+        result["vuln_name"] = "SSL Certificate Name Hostname Mismatch" # [MATCH ACUNETIX]
     except ssl.SSLError as e:
-        result["Status"] = "Error"
+        result["Status"] = "WARNING"
         result["Detail"] = "Self-Signed / Handshake Failed"
-        result["vuln_name"] = "SSL Self-Signed" # [MATCH ACUNETIX]
+        result["vuln_name"] = "Invalid SSL Certificate" # [MATCH ACUNETIX]
     except socket.timeout:
         result["Status"] = "Error"
         result["Detail"] = "Connection Timeout (Web Down)"
+        result["vuln_name"] = None
     except socket.gaierror:
         result["Status"] = "Error"
         result["Detail"] = "DNS Error (Domain not found)"
+        result["vuln_name"] = None
     except Exception as e:
         result["Status"] = "Error"
         result["Detail"] = str(e)
+        result["vuln_name"] = None
     
     return result
 

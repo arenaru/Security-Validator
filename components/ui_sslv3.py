@@ -3,7 +3,7 @@ import pandas as pd
 
 def render_sslv3_card(hasil_sslv3):
     st.subheader("🔒 SSLv3 Detection")
-    
+
     if hasil_sslv3:
         df = pd.DataFrame(hasil_sslv3)
         
@@ -34,13 +34,13 @@ def render_sslv3_card(hasil_sslv3):
             error_count = df[df['status'].str.upper() == 'ERROR'].shape[0]
             secure_count = df[df['status'].str.upper() == 'SECURE'].shape[0]
             
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                st.metric("Insecure", insecure_count, delta=None, delta_color="inverse")
-            with col2:
-                st.metric("Error", error_count, delta=None, delta_color="off")
-            with col3:
-                st.metric("Secure", secure_count, delta=None, delta_color="normal")
+            # col1, col2, col3 = st.columns(3)
+            # with col1:
+            #     st.metric("Insecure", insecure_count, delta=None, delta_color="inverse")
+            # with col2:
+            #     st.metric("Error", error_count, delta=None, delta_color="off")
+            # with col3:
+            #     st.metric("Secure", secure_count, delta=None, delta_color="normal")
             
             if insecure_count > 0:
                 st.error(f"⚠️ {insecure_count} Domain(s) with SSLv3 Enabled!")

@@ -11,6 +11,7 @@ from components.ui_nodejs import render_node_card
 from components.ui_sslv3 import render_sslv3_card
 from components.ui_tlsv10 import render_tlsv10_card
 from components.ui_tlsv11 import render_tlsv11_card
+from components.ui_phpversion import render_phpversion_card
 
 # Import Engine
 from utils.scanner_engine import start_scanning_engine
@@ -40,7 +41,8 @@ with st.sidebar:
         "Security Headers": "Security Headers Check",
         "Cookie Secure Flag": "Cookie Secure Flag (Bash)",
         "Laravel Debug": "Laravel Debug Mode",
-        "Node.js Debug": "Node.js Debug Mode"
+        "Node.js Debug": "Node.js Debug Mode",
+        "PHP Version Disclosure": "PHP Version Disclosure"
     }
     
     selected_scans = []
@@ -89,7 +91,8 @@ if st.session_state["scan_results"]:
         {"key": "Security Headers Check", "func": render_header_card},
         {"key": "Cookie Secure Flag (Bash)", "func": render_cookie_card},
         {"key": "Laravel Debug Mode", "func": render_laravel_card},
-        {"key": "Node.js Debug Mode", "func": render_node_card}
+        {"key": "Node.js Debug Mode", "func": render_node_card},
+        {"key": "PHP Version Disclosure", "func": render_phpversion_card}
     ]
 
     active_modules = [m for m in ui_modules if scan_results.get(m["key"]) is not None]
