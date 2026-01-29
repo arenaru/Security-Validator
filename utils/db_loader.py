@@ -15,6 +15,11 @@ CUSTOM_OVERRIDES = {
     "HTTP Strict Transport Security (HSTS) Policy Not Enabled": "Medium",
     "HSTS Not Enabled": "Medium",
     
+    # SSL Version Detection
+    "SSLv3 Detected (POODLE Vulnerability)": "High",
+    "TLS 1.0 Detected (Deprecated)": "Medium",
+    "TLS 1.1 Detected (Deprecated)": "Medium",
+    
     # Debug Modes
     "Laravel Debug Mode Enabled": "Medium",
     "Node.js Debug Mode Enabled": "Medium",

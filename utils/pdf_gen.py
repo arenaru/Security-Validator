@@ -86,7 +86,7 @@ def generate_report(results):
                 vuln_lookup_name = vuln_name
                 if "max-age=0" in vuln_name:
                     vuln_lookup_name = "HTTP Strict Transport Security (HSTS) Policy Not Enabled"
-                    
+
                 severity_display = get_vuln_severity(vuln_lookup_name) # Ambil "Medium" dari DB
 
             data.append([domain, status, severity_display])
@@ -172,6 +172,51 @@ def generate_report(results):
                     if status == "VULNERABLE":
                         severity = get_vuln_severity(msg)
                     data.append([url, status, severity])
+        pdf.chapter_body(headers, data, [100, 30, 60])
+
+    # 7. SSLv3 DETECTION
+    if results.get("SSLv3 Detection"):
+        pdf.chapter_title('SSLv3 Detection')
+        headers = ['URL', 'Status', 'Severity']
+        data = []
+        for item in results["SSLv3 Detection"]:
+            status = item['status']
+            severity = "Safe"
+            if status.upper() == 'INSECURE':
+                severity = get_vuln_severity('SSLv3 Detected (POODLE Vulnerability)')
+            elif status.upper() == 'ERROR':
+                severity = 'Unknown'
+            data.append([item['target'], status, severity])
+        pdf.chapter_body(headers, data, [100, 30, 60])
+
+    # 8. TLS 1.0 DETECTION
+    if results.get("TLS 1.0 Detection"):
+        pdf.chapter_title('TLS 1.0 Detection')
+        headers = ['URL', 'Status', 'Severity']
+        data = []
+        for item in results["TLS 1.0 Detection"]:
+            status = item['status']
+            severity = "Safe"
+            if status.upper() == 'INSECURE':
+                severity = get_vuln_severity('TLS 1.0 Detected (Deprecated)')
+            elif status.upper() == 'ERROR':
+                severity = 'Unknown'
+            data.append([item['target'], status, severity])
+        pdf.chapter_body(headers, data, [100, 30, 60])
+
+    # 9. TLS 1.1 DETECTION
+    if results.get("TLS 1.1 Detection"):
+        pdf.chapter_title('TLS 1.1 Detection')
+        headers = ['URL', 'Status', 'Severity']
+        data = []
+        for item in results["TLS 1.1 Detection"]:
+            status = item['status']
+            severity = "Safe"
+            if status.upper() == 'INSECURE':
+                severity = get_vuln_severity('TLS 1.1 Detected (Deprecated)')
+            elif status.upper() == 'ERROR':
+                severity = 'Unknown'
+            data.append([item['target'], status, severity])
         pdf.chapter_body(headers, data, [100, 30, 60])
 
     return pdf.output(dest='S').encode('latin-1') 

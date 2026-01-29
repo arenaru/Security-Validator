@@ -8,6 +8,9 @@ from script.hstsChecker import run_hsts_scan
 from script.headerCheck import check_security_headers
 from script.laravelCheck import run_laravel_scan
 from script.nodeDebug import run_node_scan
+from script.sslv3 import check_sslv3
+from script.tlsv10 import check_tls10
+from script.tlsv11 import check_tls11
 
 # Helper function untuk Bash
 def run_bash_worker(file_path):
@@ -32,6 +35,15 @@ def start_scanning_engine(targets_list, selected_scans, temp_file_path):
         
         if "SSL Certificate Check" in selected_scans:
             futures["SSL Certificate Check"] = executor.submit(run_ssl_scan, temp_file_path)
+        
+        if "SSLv3 Detection" in selected_scans:
+            futures["SSLv3 Detection"] = executor.submit(lambda: [check_sslv3(target) for target in targets_list])
+        
+        if "TLS 1.0 Detection" in selected_scans:
+            futures["TLS 1.0 Detection"] = executor.submit(lambda: [check_tls10(target) for target in targets_list])
+        
+        if "TLS 1.1 Detection" in selected_scans:
+            futures["TLS 1.1 Detection"] = executor.submit(lambda: [check_tls11(target) for target in targets_list])
         
         if "HSTS Security Check" in selected_scans:
             futures["HSTS Security Check"] = executor.submit(run_hsts_scan, targets_list)

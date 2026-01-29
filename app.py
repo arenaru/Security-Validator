@@ -8,6 +8,9 @@ from components.ui_cookie import render_cookie_card
 from components.ui_header import render_header_card
 from components.ui_laravel import render_laravel_card
 from components.ui_nodejs import render_node_card
+from components.ui_sslv3 import render_sslv3_card
+from components.ui_tlsv10 import render_tlsv10_card
+from components.ui_tlsv11 import render_tlsv11_card
 
 # Import Engine
 from utils.scanner_engine import start_scanning_engine
@@ -30,6 +33,9 @@ with st.sidebar:
     
     scan_map = {
         "SSL Certificate": "SSL Certificate Check",
+        "SSLv3 Detection": "SSLv3 Detection",
+        "TLS 1.0 Detection": "TLS 1.0 Detection",
+        "TLS 1.1 Detection": "TLS 1.1 Detection",
         "HSTS Security": "HSTS Security Check",
         "Security Headers": "Security Headers Check",
         "Cookie Secure Flag": "Cookie Secure Flag (Bash)",
@@ -76,6 +82,9 @@ if st.session_state["scan_results"]:
     # Format Engine Baru: { "SSL Certificate Check": [...], ... }
     ui_modules = [
         {"key": "SSL Certificate Check", "func": render_ssl_card},
+        {"key": "SSLv3 Detection", "func": render_sslv3_card},
+        {"key": "TLS 1.0 Detection", "func": render_tlsv10_card},
+        {"key": "TLS 1.1 Detection", "func": render_tlsv11_card},
         {"key": "HSTS Security Check", "func": render_hsts_card},
         {"key": "Security Headers Check", "func": render_header_card},
         {"key": "Cookie Secure Flag (Bash)", "func": render_cookie_card},
