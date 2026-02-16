@@ -1,0 +1,1759 @@
+[
+  {
+    "name": "OS command injection",
+    "severity": "High",
+    "index_hex": "0x00100100",
+    "index_dec": 1048832,
+    "classifications": [
+      "CWE-77",
+      "CWE-78",
+      "CWE-116"
+    ]
+  },
+  {
+    "name": "SQL injection",
+    "severity": "High",
+    "index_hex": "0x00100200",
+    "index_dec": 1049088,
+    "classifications": [
+      "CWE-89",
+      "CWE-94",
+      "CWE-116"
+    ]
+  },
+  {
+    "name": "SQL injection (second order)",
+    "severity": "High",
+    "index_hex": "0x00100210",
+    "index_dec": 1049104,
+    "classifications": [
+      "CWE-89",
+      "CWE-94",
+      "CWE-116"
+    ]
+  },
+  {
+    "name": "ASP.NET tracing enabled",
+    "severity": "High",
+    "index_hex": "0x00100280",
+    "index_dec": 1049216,
+    "classifications": [
+      "CWE-10",
+      "CWE-11"
+    ]
+  },
+  {
+    "name": "File path traversal",
+    "severity": "High",
+    "index_hex": "0x00100300",
+    "index_dec": 1049344,
+    "classifications": [
+      "CWE-22",
+      "CWE-23",
+      "CWE-35",
+      "CWE-36"
+    ]
+  },
+  {
+    "name": "XML external entity injection",
+    "severity": "High",
+    "index_hex": "0x00100400",
+    "index_dec": 1049600,
+    "classifications": [
+      "CWE-611"
+    ]
+  },
+  {
+    "name": "LDAP injection",
+    "severity": "High",
+    "index_hex": "0x00100500",
+    "index_dec": 1049856,
+    "classifications": [
+      "CWE-90",
+      "CWE-116"
+    ]
+  },
+  {
+    "name": "XPath injection",
+    "severity": "High",
+    "index_hex": "0x00100600",
+    "index_dec": 1050112,
+    "classifications": [
+      "CWE-94",
+      "CWE-116",
+      "CWE-159",
+      "CWE-643"
+    ]
+  },
+  {
+    "name": "XML injection",
+    "severity": "Medium",
+    "index_hex": "0x00100700",
+    "index_dec": 1050368,
+    "classifications": [
+      "CWE-91",
+      "CWE-116",
+      "CWE-159",
+      "CWE-611",
+      "CWE-776"
+    ]
+  },
+  {
+    "name": "ASP.NET debugging enabled",
+    "severity": "Medium",
+    "index_hex": "0x00100800",
+    "index_dec": 1050624,
+    "classifications": [
+      "CWE-11"
+    ]
+  },
+  {
+    "name": "Broken access control",
+    "severity": "Information",
+    "index_hex": "0x00100850",
+    "index_dec": 1050704,
+    "classifications": [
+      "CWE-284"
+    ]
+  },
+  {
+    "name": "HTTP PUT method is enabled",
+    "severity": "High",
+    "index_hex": "0x00100900",
+    "index_dec": 1050880,
+    "classifications": [
+      "CWE-650"
+    ]
+  },
+  {
+    "name": "Out-of-band resource load (HTTP)",
+    "severity": "High",
+    "index_hex": "0x00100a00",
+    "index_dec": 1051136,
+    "classifications": [
+      "CWE-610",
+      "CWE-918"
+    ]
+  },
+  {
+    "name": "File path manipulation",
+    "severity": "High",
+    "index_hex": "0x00100b00",
+    "index_dec": 1051392,
+    "classifications": [
+      "CWE-22",
+      "CWE-23",
+      "CWE-35",
+      "CWE-36"
+    ]
+  },
+  {
+    "name": "PHP code injection",
+    "severity": "High",
+    "index_hex": "0x00100c00",
+    "index_dec": 1051648,
+    "classifications": [
+      "CWE-94",
+      "CWE-116",
+      "CWE-159"
+    ]
+  },
+  {
+    "name": "Server-side JavaScript code injection",
+    "severity": "High",
+    "index_hex": "0x00100d00",
+    "index_dec": 1051904,
+    "classifications": [
+      "CWE-94",
+      "CWE-95",
+      "CWE-116"
+    ]
+  },
+  {
+    "name": "Perl code injection",
+    "severity": "High",
+    "index_hex": "0x00100e00",
+    "index_dec": 1052160,
+    "classifications": [
+      "CWE-94",
+      "CWE-95",
+      "CWE-116"
+    ]
+  },
+  {
+    "name": "Ruby code injection",
+    "severity": "High",
+    "index_hex": "0x00100f00",
+    "index_dec": 1052416,
+    "classifications": [
+      "CWE-94",
+      "CWE-95",
+      "CWE-116"
+    ]
+  },
+  {
+    "name": "Python code injection",
+    "severity": "High",
+    "index_hex": "0x00100f10",
+    "index_dec": 1052432,
+    "classifications": [
+      "CWE-94",
+      "CWE-95",
+      "CWE-116"
+    ]
+  },
+  {
+    "name": "Expression Language injection",
+    "severity": "High",
+    "index_hex": "0x00100f20",
+    "index_dec": 1052448,
+    "classifications": [
+      "CWE-116",
+      "CWE-159",
+      "CWE-917"
+    ]
+  },
+  {
+    "name": "Unidentified code injection",
+    "severity": "High",
+    "index_hex": "0x00101000",
+    "index_dec": 1052672,
+    "classifications": [
+      "CWE-94",
+      "CWE-95",
+      "CWE-116"
+    ]
+  },
+  {
+    "name": "Server-side template injection",
+    "severity": "High",
+    "index_hex": "0x00101080",
+    "index_dec": 1052800,
+    "classifications": [
+      "CWE-94",
+      "CWE-95",
+      "CWE-116"
+    ]
+  },
+  {
+    "name": "SSI injection",
+    "severity": "High",
+    "index_hex": "0x00101100",
+    "index_dec": 1052928,
+    "classifications": [
+      "CWE-96",
+      "CWE-116",
+      "CWE-159"
+    ]
+  },
+  {
+    "name": "React Server Components remote code execution (React2Shell)",
+    "severity": "High",
+    "index_hex": "0x00101200",
+    "index_dec": 1053184,
+    "classifications": [
+      "CWE-502"
+    ]
+  },
+  {
+    "name": "Cross-site scripting (stored)",
+    "severity": "High",
+    "index_hex": "0x00200100",
+    "index_dec": 2097408,
+    "classifications": [
+      "CWE-79",
+      "CWE-80",
+      "CWE-116",
+      "CWE-159"
+    ]
+  },
+  {
+    "name": "HTTP request smuggling",
+    "severity": "High",
+    "index_hex": "0x00200140",
+    "index_dec": 2097472,
+    "classifications": [
+      "CWE-444"
+    ]
+  },
+  {
+    "name": "Client-side desync",
+    "severity": "High",
+    "index_hex": "0x00200141",
+    "index_dec": 2097473,
+    "classifications": [
+      "CWE-444"
+    ]
+  },
+  {
+    "name": "Web cache poisoning",
+    "severity": "High",
+    "index_hex": "0x00200180",
+    "index_dec": 2097536,
+    "classifications": [
+      "CWE-436"
+    ]
+  },
+  {
+    "name": "HTTP response header injection",
+    "severity": "High",
+    "index_hex": "0x00200200",
+    "index_dec": 2097664,
+    "classifications": [
+      "CWE-113"
+    ]
+  },
+  {
+    "name": "Cross-site scripting (reflected)",
+    "severity": "High",
+    "index_hex": "0x00200300",
+    "index_dec": 2097920,
+    "classifications": [
+      "CWE-79",
+      "CWE-80",
+      "CWE-116",
+      "CWE-159"
+    ]
+  },
+  {
+    "name": "Client-side template injection",
+    "severity": "High",
+    "index_hex": "0x00200308",
+    "index_dec": 2097928,
+    "classifications": [
+      "CWE-116",
+      "CWE-159"
+    ]
+  },
+  {
+    "name": "Cross-site scripting (DOM-based)",
+    "severity": "High",
+    "index_hex": "0x00200310",
+    "index_dec": 2097936,
+    "classifications": [
+      "CWE-79",
+      "CWE-80",
+      "CWE-116",
+      "CWE-159"
+    ]
+  },
+  {
+    "name": "Cross-site scripting (reflected DOM-based)",
+    "severity": "High",
+    "index_hex": "0x00200311",
+    "index_dec": 2097937,
+    "classifications": [
+      "CWE-79",
+      "CWE-80",
+      "CWE-116",
+      "CWE-159"
+    ]
+  },
+  {
+    "name": "Cross-site scripting (stored DOM-based)",
+    "severity": "High",
+    "index_hex": "0x00200312",
+    "index_dec": 2097938,
+    "classifications": [
+      "CWE-79",
+      "CWE-80",
+      "CWE-116",
+      "CWE-159"
+    ]
+  },
+  {
+    "name": "Client-side prototype pollution",
+    "severity": "Information",
+    "index_hex": "0x00200316",
+    "index_dec": 2097942,
+    "classifications": [
+      "CWE-1321"
+    ]
+  },
+  {
+    "name": "JavaScript injection (DOM-based)",
+    "severity": "High",
+    "index_hex": "0x00200320",
+    "index_dec": 2097952,
+    "classifications": [
+      "CWE-94",
+      "CWE-95",
+      "CWE-116"
+    ]
+  },
+  {
+    "name": "JavaScript injection (reflected DOM-based)",
+    "severity": "High",
+    "index_hex": "0x00200321",
+    "index_dec": 2097953,
+    "classifications": [
+      "CWE-94",
+      "CWE-95",
+      "CWE-116"
+    ]
+  },
+  {
+    "name": "JavaScript injection (stored DOM-based)",
+    "severity": "High",
+    "index_hex": "0x00200322",
+    "index_dec": 2097954,
+    "classifications": [
+      "CWE-94",
+      "CWE-95",
+      "CWE-116"
+    ]
+  },
+  {
+    "name": "Path-relative style sheet import",
+    "severity": "Information",
+    "index_hex": "0x00200328",
+    "index_dec": 2097960,
+    "classifications": [
+      "CWE-16"
+    ]
+  },
+  {
+    "name": "Client-side SQL injection (DOM-based)",
+    "severity": "High",
+    "index_hex": "0x00200330",
+    "index_dec": 2097968,
+    "classifications": [
+      "CWE-89",
+      "CWE-116",
+      "CWE-159"
+    ]
+  },
+  {
+    "name": "Client-side SQL injection (reflected DOM-based)",
+    "severity": "High",
+    "index_hex": "0x00200331",
+    "index_dec": 2097969,
+    "classifications": [
+      "CWE-89",
+      "CWE-116",
+      "CWE-159"
+    ]
+  },
+  {
+    "name": "Client-side SQL injection (stored DOM-based)",
+    "severity": "High",
+    "index_hex": "0x00200332",
+    "index_dec": 2097970,
+    "classifications": [
+      "CWE-89",
+      "CWE-116",
+      "CWE-159"
+    ]
+  },
+  {
+    "name": "WebSocket URL poisoning (DOM-based)",
+    "severity": "High",
+    "index_hex": "0x00200340",
+    "index_dec": 2097984,
+    "classifications": [
+      "CWE-345",
+      "CWE-346",
+      "CWE-441"
+    ]
+  },
+  {
+    "name": "WebSocket URL poisoning (reflected DOM-based)",
+    "severity": "High",
+    "index_hex": "0x00200341",
+    "index_dec": 2097985,
+    "classifications": [
+      "CWE-345",
+      "CWE-346",
+      "CWE-441"
+    ]
+  },
+  {
+    "name": "WebSocket URL poisoning (stored DOM-based)",
+    "severity": "High",
+    "index_hex": "0x00200342",
+    "index_dec": 2097986,
+    "classifications": [
+      "CWE-345",
+      "CWE-346",
+      "CWE-441"
+    ]
+  },
+  {
+    "name": "Local file path manipulation (DOM-based)",
+    "severity": "High",
+    "index_hex": "0x00200350",
+    "index_dec": 2098000,
+    "classifications": [
+      "CWE-22",
+      "CWE-73"
+    ]
+  },
+  {
+    "name": "Local file path manipulation (reflected DOM-based)",
+    "severity": "High",
+    "index_hex": "0x00200351",
+    "index_dec": 2098001,
+    "classifications": [
+      "CWE-22",
+      "CWE-73"
+    ]
+  },
+  {
+    "name": "Local file path manipulation (stored DOM-based)",
+    "severity": "High",
+    "index_hex": "0x00200352",
+    "index_dec": 2098002,
+    "classifications": [
+      "CWE-22",
+      "CWE-73"
+    ]
+  },
+  {
+    "name": "Client-side XPath injection (DOM-based)",
+    "severity": "Low",
+    "index_hex": "0x00200360",
+    "index_dec": 2098016,
+    "classifications": [
+      "CWE-79",
+      "CWE-116",
+      "CWE-159"
+    ]
+  },
+  {
+    "name": "Client-side XPath injection (reflected DOM-based)",
+    "severity": "Low",
+    "index_hex": "0x00200361",
+    "index_dec": 2098017,
+    "classifications": [
+      "CWE-79",
+      "CWE-116",
+      "CWE-159"
+    ]
+  },
+  {
+    "name": "Client-side XPath injection (stored DOM-based)",
+    "severity": "Low",
+    "index_hex": "0x00200362",
+    "index_dec": 2098018,
+    "classifications": [
+      "CWE-79",
+      "CWE-116",
+      "CWE-159"
+    ]
+  },
+  {
+    "name": "Client-side JSON injection (DOM-based)",
+    "severity": "Low",
+    "index_hex": "0x00200370",
+    "index_dec": 2098032,
+    "classifications": [
+      "CWE-79",
+      "CWE-116",
+      "CWE-159"
+    ]
+  },
+  {
+    "name": "Client-side JSON injection (reflected DOM-based)",
+    "severity": "Low",
+    "index_hex": "0x00200371",
+    "index_dec": 2098033,
+    "classifications": [
+      "CWE-79",
+      "CWE-116",
+      "CWE-159"
+    ]
+  },
+  {
+    "name": "Client-side JSON injection (stored DOM-based)",
+    "severity": "Low",
+    "index_hex": "0x00200372",
+    "index_dec": 2098034,
+    "classifications": [
+      "CWE-79",
+      "CWE-116",
+      "CWE-159"
+    ]
+  },
+  {
+    "name": "Flash cross-domain policy",
+    "severity": "High",
+    "index_hex": "0x00200400",
+    "index_dec": 2098176,
+    "classifications": [
+      "CWE-942"
+    ]
+  },
+  {
+    "name": "Silverlight cross-domain policy",
+    "severity": "High",
+    "index_hex": "0x00200500",
+    "index_dec": 2098432,
+    "classifications": [
+      "CWE-942"
+    ]
+  },
+  {
+    "name": "Content security policy: allowlisted script resources",
+    "severity": "Information",
+    "index_hex": "0x00200503",
+    "index_dec": 2098435,
+    "classifications": [
+      "CWE-79",
+      "CWE-80",
+      "CWE-116",
+      "CWE-159"
+    ]
+  },
+  {
+    "name": "Content security policy: allows untrusted script execution",
+    "severity": "Information",
+    "index_hex": "0x00200504",
+    "index_dec": 2098436,
+    "classifications": [
+      "CWE-79",
+      "CWE-80",
+      "CWE-116",
+      "CWE-159"
+    ]
+  },
+  {
+    "name": "Content security policy: allows untrusted style execution",
+    "severity": "Information",
+    "index_hex": "0x00200505",
+    "index_dec": 2098437,
+    "classifications": [
+      "CWE-116",
+      "CWE-159"
+    ]
+  },
+  {
+    "name": "Content security policy: malformed syntax",
+    "severity": "Information",
+    "index_hex": "0x00200506",
+    "index_dec": 2098438,
+    "classifications": []
+  },
+  {
+    "name": "Content security policy: allows clickjacking",
+    "severity": "Information",
+    "index_hex": "0x00200507",
+    "index_dec": 2098439,
+    "classifications": [
+      "CWE-693",
+      "CWE-1021"
+    ]
+  },
+  {
+    "name": "Content security policy: allows form hijacking",
+    "severity": "Information",
+    "index_hex": "0x00200508",
+    "index_dec": 2098440,
+    "classifications": [
+      "CWE-116"
+    ]
+  },
+  {
+    "name": "Content security policy: not enforced",
+    "severity": "Information",
+    "index_hex": "0x00200509",
+    "index_dec": 2098441,
+    "classifications": []
+  },
+  {
+    "name": "GraphQL endpoint found",
+    "severity": "Information",
+    "index_hex": "0x00200510",
+    "index_dec": 2098448,
+    "classifications": []
+  },
+  {
+    "name": "GraphQL endpoint discovered",
+    "severity": "Information",
+    "index_hex": "0x00200511",
+    "index_dec": 2098449,
+    "classifications": []
+  },
+  {
+    "name": "GraphQL introspection enabled",
+    "severity": "Low",
+    "index_hex": "0x00200512",
+    "index_dec": 2098450,
+    "classifications": [
+      "CWE-200"
+    ]
+  },
+  {
+    "name": "GraphQL suggestions enabled",
+    "severity": "Low",
+    "index_hex": "0x00200513",
+    "index_dec": 2098451,
+    "classifications": [
+      "CWE-200"
+    ]
+  },
+  {
+    "name": "GraphQL content type not validated",
+    "severity": "Low",
+    "index_hex": "0x00200514",
+    "index_dec": 2098452,
+    "classifications": [
+      "CWE-352"
+    ]
+  },
+  {
+    "name": "Cross-origin resource sharing",
+    "severity": "Information",
+    "index_hex": "0x00200600",
+    "index_dec": 2098688,
+    "classifications": [
+      "CWE-942"
+    ]
+  },
+  {
+    "name": "Cross-origin resource sharing: arbitrary origin trusted",
+    "severity": "High",
+    "index_hex": "0x00200601",
+    "index_dec": 2098689,
+    "classifications": [
+      "CWE-942"
+    ]
+  },
+  {
+    "name": "Cross-origin resource sharing: unencrypted origin trusted",
+    "severity": "Low",
+    "index_hex": "0x00200602",
+    "index_dec": 2098690,
+    "classifications": [
+      "CWE-942"
+    ]
+  },
+  {
+    "name": "Cross-origin resource sharing: all subdomains trusted",
+    "severity": "Low",
+    "index_hex": "0x00200603",
+    "index_dec": 2098691,
+    "classifications": [
+      "CWE-942"
+    ]
+  },
+  {
+    "name": "Web cache deception",
+    "severity": "Medium",
+    "index_hex": "0x00200650",
+    "index_dec": 2098768,
+    "classifications": []
+  },
+  {
+    "name": "Cross-site request forgery",
+    "severity": "Medium",
+    "index_hex": "0x00200700",
+    "index_dec": 2098944,
+    "classifications": [
+      "CWE-352"
+    ]
+  },
+  {
+    "name": "SMTP header injection",
+    "severity": "Medium",
+    "index_hex": "0x00200800",
+    "index_dec": 2099200,
+    "classifications": [
+      "CWE-93",
+      "CWE-159"
+    ]
+  },
+  {
+    "name": "JWT signature not verified",
+    "severity": "High",
+    "index_hex": "0x00200900",
+    "index_dec": 2099456,
+    "classifications": [
+      "CWE-345",
+      "CWE-347"
+    ]
+  },
+  {
+    "name": "JWT none algorithm supported",
+    "severity": "High",
+    "index_hex": "0x00200901",
+    "index_dec": 2099457,
+    "classifications": [
+      "CWE-345"
+    ]
+  },
+  {
+    "name": "JWT self-signed JWK header supported",
+    "severity": "High",
+    "index_hex": "0x00200902",
+    "index_dec": 2099458,
+    "classifications": []
+  },
+  {
+    "name": "JWT weak HMAC secret",
+    "severity": "High",
+    "index_hex": "0x00200903",
+    "index_dec": 2099459,
+    "classifications": []
+  },
+  {
+    "name": "JWT arbitrary jku header supported",
+    "severity": "High",
+    "index_hex": "0x00200904",
+    "index_dec": 2099460,
+    "classifications": []
+  },
+  {
+    "name": "JWT arbitrary x5u header supported",
+    "severity": "High",
+    "index_hex": "0x00200905",
+    "index_dec": 2099461,
+    "classifications": []
+  },
+  {
+    "name": "Cleartext submission of password",
+    "severity": "High",
+    "index_hex": "0x00300100",
+    "index_dec": 3145984,
+    "classifications": [
+      "CWE-319"
+    ]
+  },
+  {
+    "name": "External service interaction (DNS)",
+    "severity": "Information",
+    "index_hex": "0x00300200",
+    "index_dec": 3146240,
+    "classifications": [
+      "CWE-918",
+      "CWE-406"
+    ]
+  },
+  {
+    "name": "External service interaction (HTTP)",
+    "severity": "High",
+    "index_hex": "0x00300210",
+    "index_dec": 3146256,
+    "classifications": [
+      "CWE-918",
+      "CWE-406"
+    ]
+  },
+  {
+    "name": "External service interaction (SMTP)",
+    "severity": "Information",
+    "index_hex": "0x00300220",
+    "index_dec": 3146272,
+    "classifications": [
+      "CWE-16",
+      "CWE-406"
+    ]
+  },
+  {
+    "name": "Referer-dependent response",
+    "severity": "Information",
+    "index_hex": "0x00400100",
+    "index_dec": 4194560,
+    "classifications": [
+      "CWE-16",
+      "CWE-213"
+    ]
+  },
+  {
+    "name": "Spoofable client IP address",
+    "severity": "Information",
+    "index_hex": "0x00400110",
+    "index_dec": 4194576,
+    "classifications": [
+      "CWE-16"
+    ]
+  },
+  {
+    "name": "User agent-dependent response",
+    "severity": "Information",
+    "index_hex": "0x00400120",
+    "index_dec": 4194592,
+    "classifications": [
+      "CWE-16"
+    ]
+  },
+  {
+    "name": "Password returned in later response",
+    "severity": "Medium",
+    "index_hex": "0x00400200",
+    "index_dec": 4194816,
+    "classifications": [
+      "CWE-204"
+    ]
+  },
+  {
+    "name": "Password submitted using GET method",
+    "severity": "Low",
+    "index_hex": "0x00400300",
+    "index_dec": 4195072,
+    "classifications": [
+      "CWE-598"
+    ]
+  },
+  {
+    "name": "Password returned in URL query string",
+    "severity": "Low",
+    "index_hex": "0x00400400",
+    "index_dec": 4195328,
+    "classifications": [
+      "CWE-598"
+    ]
+  },
+  {
+    "name": "SQL statement in request parameter",
+    "severity": "Medium",
+    "index_hex": "0x00400480",
+    "index_dec": 4195456,
+    "classifications": [
+      "CWE-598"
+    ]
+  },
+  {
+    "name": "Cross-domain POST",
+    "severity": "Information",
+    "index_hex": "0x00400500",
+    "index_dec": 4195584,
+    "classifications": [
+      "CWE-16"
+    ]
+  },
+  {
+    "name": "ASP.NET ViewState without MAC enabled",
+    "severity": "High",
+    "index_hex": "0x00400600",
+    "index_dec": 4195840,
+    "classifications": [
+      "CWE-642"
+    ]
+  },
+  {
+    "name": "XML entity expansion",
+    "severity": "Medium",
+    "index_hex": "0x00400700",
+    "index_dec": 4196096,
+    "classifications": [
+      "CWE-776"
+    ]
+  },
+  {
+    "name": "Long redirection response",
+    "severity": "Information",
+    "index_hex": "0x00400800",
+    "index_dec": 4196352,
+    "classifications": [
+      "CWE-698"
+    ]
+  },
+  {
+    "name": "Serialized object in HTTP message",
+    "severity": "High",
+    "index_hex": "0x00400900",
+    "index_dec": 4196608,
+    "classifications": [
+      "CWE-502"
+    ]
+  },
+  {
+    "name": "Duplicate cookies set",
+    "severity": "Information",
+    "index_hex": "0x00400a00",
+    "index_dec": 4196864,
+    "classifications": [
+      "CWE-16"
+    ]
+  },
+  {
+    "name": "Input returned in response (stored)",
+    "severity": "Information",
+    "index_hex": "0x00400b00",
+    "index_dec": 4197120,
+    "classifications": [
+      "CWE-20",
+      "CWE-116"
+    ]
+  },
+  {
+    "name": "Input returned in response (reflected)",
+    "severity": "Information",
+    "index_hex": "0x00400c00",
+    "index_dec": 4197376,
+    "classifications": [
+      "CWE-20",
+      "CWE-116"
+    ]
+  },
+  {
+    "name": "Suspicious input transformation (reflected)",
+    "severity": "Information",
+    "index_hex": "0x00400d00",
+    "index_dec": 4197632,
+    "classifications": [
+      "CWE-20"
+    ]
+  },
+  {
+    "name": "Suspicious input transformation (stored)",
+    "severity": "Information",
+    "index_hex": "0x00400e00",
+    "index_dec": 4197888,
+    "classifications": [
+      "CWE-20"
+    ]
+  },
+  {
+    "name": "Request URL override",
+    "severity": "Information",
+    "index_hex": "0x00400f00",
+    "index_dec": 4198144,
+    "classifications": [
+      "CWE-436"
+    ]
+  },
+  {
+    "name": "Vulnerable JavaScript dependency",
+    "severity": "Low",
+    "index_hex": "0x00500080",
+    "index_dec": 5243008,
+    "classifications": [
+      "CWE-1104"
+    ]
+  },
+  {
+    "name": "Open redirection (reflected)",
+    "severity": "Low",
+    "index_hex": "0x00500100",
+    "index_dec": 5243136,
+    "classifications": [
+      "CWE-601"
+    ]
+  },
+  {
+    "name": "Open redirection (stored)",
+    "severity": "Medium",
+    "index_hex": "0x00500101",
+    "index_dec": 5243137,
+    "classifications": [
+      "CWE-601"
+    ]
+  },
+  {
+    "name": "Open redirection (DOM-based)",
+    "severity": "Low",
+    "index_hex": "0x00500110",
+    "index_dec": 5243152,
+    "classifications": [
+      "CWE-601"
+    ]
+  },
+  {
+    "name": "Open redirection (reflected DOM-based)",
+    "severity": "Low",
+    "index_hex": "0x00500111",
+    "index_dec": 5243153,
+    "classifications": [
+      "CWE-601"
+    ]
+  },
+  {
+    "name": "Open redirection (stored DOM-based)",
+    "severity": "Medium",
+    "index_hex": "0x00500112",
+    "index_dec": 5243154,
+    "classifications": [
+      "CWE-601"
+    ]
+  },
+  {
+    "name": "TLS cookie without secure flag set",
+    "severity": "Medium",
+    "index_hex": "0x00500200",
+    "index_dec": 5243392,
+    "classifications": [
+      "CWE-614"
+    ]
+  },
+  {
+    "name": "Cookie scoped to parent domain",
+    "severity": "Low",
+    "index_hex": "0x00500300",
+    "index_dec": 5243648,
+    "classifications": [
+      "CWE-16"
+    ]
+  },
+  {
+    "name": "Cross-domain Referer leakage",
+    "severity": "Information",
+    "index_hex": "0x00500400",
+    "index_dec": 5243904,
+    "classifications": [
+      "CWE-200"
+    ]
+  },
+  {
+    "name": "Cross-domain script include",
+    "severity": "Information",
+    "index_hex": "0x00500500",
+    "index_dec": 5244160,
+    "classifications": [
+      "CWE-829"
+    ]
+  },
+  {
+    "name": "Cookie without HttpOnly flag set",
+    "severity": "Low",
+    "index_hex": "0x00500600",
+    "index_dec": 5244416,
+    "classifications": [
+      "CWE-16"
+    ]
+  },
+  {
+    "name": "Session token in URL",
+    "severity": "Medium",
+    "index_hex": "0x00500700",
+    "index_dec": 5244672,
+    "classifications": [
+      "CWE-200",
+      "CWE-384",
+      "CWE-598"
+    ]
+  },
+  {
+    "name": "Password field with autocomplete enabled",
+    "severity": "Low",
+    "index_hex": "0x00500800",
+    "index_dec": 5244928,
+    "classifications": [
+      "CWE-200"
+    ]
+  },
+  {
+    "name": "Password value set in cookie",
+    "severity": "Medium",
+    "index_hex": "0x00500900",
+    "index_dec": 5245184,
+    "classifications": [
+      "CWE-287"
+    ]
+  },
+  {
+    "name": "File upload functionality",
+    "severity": "Information",
+    "index_hex": "0x00500980",
+    "index_dec": 5245312,
+    "classifications": [
+      "CWE-434"
+    ]
+  },
+  {
+    "name": "Frameable response (potential Clickjacking)",
+    "severity": "Information",
+    "index_hex": "0x005009a0",
+    "index_dec": 5245344,
+    "classifications": [
+      "CWE-693",
+      "CWE-1021"
+    ]
+  },
+  {
+    "name": "Browser cross-site scripting filter disabled",
+    "severity": "Information",
+    "index_hex": "0x005009b0",
+    "index_dec": 5245360,
+    "classifications": [
+      "CWE-16"
+    ]
+  },
+  {
+    "name": "HTTP TRACE method is enabled",
+    "severity": "Information",
+    "index_hex": "0x00500a00",
+    "index_dec": 5245440,
+    "classifications": [
+      "CWE-16"
+    ]
+  },
+  {
+    "name": "Cookie manipulation (DOM-based)",
+    "severity": "Low",
+    "index_hex": "0x00500b00",
+    "index_dec": 5245696,
+    "classifications": [
+      "CWE-565",
+      "CWE-829"
+    ]
+  },
+  {
+    "name": "Cookie manipulation (reflected DOM-based)",
+    "severity": "Low",
+    "index_hex": "0x00500b01",
+    "index_dec": 5245697,
+    "classifications": [
+      "CWE-565",
+      "CWE-829"
+    ]
+  },
+  {
+    "name": "Cookie manipulation (stored DOM-based)",
+    "severity": "Low",
+    "index_hex": "0x00500b02",
+    "index_dec": 5245698,
+    "classifications": [
+      "CWE-565",
+      "CWE-829"
+    ]
+  },
+  {
+    "name": "Ajax request header manipulation (DOM-based)",
+    "severity": "Low",
+    "index_hex": "0x00500c00",
+    "index_dec": 5245952,
+    "classifications": [
+      "CWE-116"
+    ]
+  },
+  {
+    "name": "Ajax request header manipulation (reflected DOM-based)",
+    "severity": "Low",
+    "index_hex": "0x00500c01",
+    "index_dec": 5245953,
+    "classifications": [
+      "CWE-116"
+    ]
+  },
+  {
+    "name": "Ajax request header manipulation (stored DOM-based)",
+    "severity": "Low",
+    "index_hex": "0x00500c02",
+    "index_dec": 5245954,
+    "classifications": [
+      "CWE-116"
+    ]
+  },
+  {
+    "name": "Denial of service (DOM-based)",
+    "severity": "Information",
+    "index_hex": "0x00500d00",
+    "index_dec": 5246208,
+    "classifications": [
+      "CWE-400"
+    ]
+  },
+  {
+    "name": "Denial of service (reflected DOM-based)",
+    "severity": "Information",
+    "index_hex": "0x00500d01",
+    "index_dec": 5246209,
+    "classifications": [
+      "CWE-400"
+    ]
+  },
+  {
+    "name": "Denial of service (stored DOM-based)",
+    "severity": "Low",
+    "index_hex": "0x00500d02",
+    "index_dec": 5246210,
+    "classifications": [
+      "CWE-400"
+    ]
+  },
+  {
+    "name": "HTML5 web message manipulation (DOM-based)",
+    "severity": "Information",
+    "index_hex": "0x00500e00",
+    "index_dec": 5246464,
+    "classifications": [
+      "CWE-20"
+    ]
+  },
+  {
+    "name": "HTML5 web message manipulation (reflected DOM-based)",
+    "severity": "Information",
+    "index_hex": "0x00500e01",
+    "index_dec": 5246465,
+    "classifications": [
+      "CWE-20"
+    ]
+  },
+  {
+    "name": "HTML5 web message manipulation (stored DOM-based)",
+    "severity": "Information",
+    "index_hex": "0x00500e02",
+    "index_dec": 5246466,
+    "classifications": [
+      "CWE-20"
+    ]
+  },
+  {
+    "name": "HTML5 storage manipulation (DOM-based)",
+    "severity": "Information",
+    "index_hex": "0x00500f00",
+    "index_dec": 5246720,
+    "classifications": [
+      "CWE-20"
+    ]
+  },
+  {
+    "name": "HTML5 storage manipulation (reflected DOM-based)",
+    "severity": "Information",
+    "index_hex": "0x00500f01",
+    "index_dec": 5246721,
+    "classifications": [
+      "CWE-20"
+    ]
+  },
+  {
+    "name": "HTML5 storage manipulation (stored DOM-based)",
+    "severity": "Information",
+    "index_hex": "0x00500f02",
+    "index_dec": 5246722,
+    "classifications": [
+      "CWE-20"
+    ]
+  },
+  {
+    "name": "Link manipulation (DOM-based)",
+    "severity": "Low",
+    "index_hex": "0x00501000",
+    "index_dec": 5246976,
+    "classifications": [
+      "CWE-20"
+    ]
+  },
+  {
+    "name": "Link manipulation (reflected DOM-based)",
+    "severity": "Low",
+    "index_hex": "0x00501001",
+    "index_dec": 5246977,
+    "classifications": [
+      "CWE-20"
+    ]
+  },
+  {
+    "name": "Link manipulation (stored DOM-based)",
+    "severity": "Low",
+    "index_hex": "0x00501002",
+    "index_dec": 5246978,
+    "classifications": [
+      "CWE-20"
+    ]
+  },
+  {
+    "name": "Link manipulation (reflected)",
+    "severity": "Information",
+    "index_hex": "0x00501003",
+    "index_dec": 5246979,
+    "classifications": [
+      "CWE-73",
+      "CWE-20"
+    ]
+  },
+  {
+    "name": "Link manipulation (stored)",
+    "severity": "Information",
+    "index_hex": "0x00501004",
+    "index_dec": 5246980,
+    "classifications": [
+      "CWE-73",
+      "CWE-20"
+    ]
+  },
+  {
+    "name": "Document domain manipulation (DOM-based)",
+    "severity": "Medium",
+    "index_hex": "0x00501100",
+    "index_dec": 5247232,
+    "classifications": [
+      "CWE-20"
+    ]
+  },
+  {
+    "name": "Document domain manipulation (reflected DOM-based)",
+    "severity": "Medium",
+    "index_hex": "0x00501101",
+    "index_dec": 5247233,
+    "classifications": [
+      "CWE-20"
+    ]
+  },
+  {
+    "name": "Document domain manipulation (stored DOM-based)",
+    "severity": "Medium",
+    "index_hex": "0x00501102",
+    "index_dec": 5247234,
+    "classifications": [
+      "CWE-20"
+    ]
+  },
+  {
+    "name": "DOM data manipulation (DOM-based)",
+    "severity": "Information",
+    "index_hex": "0x00501200",
+    "index_dec": 5247488,
+    "classifications": [
+      "CWE-20"
+    ]
+  },
+  {
+    "name": "DOM data manipulation (reflected DOM-based)",
+    "severity": "Information",
+    "index_hex": "0x00501201",
+    "index_dec": 5247489,
+    "classifications": [
+      "CWE-20"
+    ]
+  },
+  {
+    "name": "DOM data manipulation (stored DOM-based)",
+    "severity": "Information",
+    "index_hex": "0x00501202",
+    "index_dec": 5247490,
+    "classifications": [
+      "CWE-20"
+    ]
+  },
+  {
+    "name": "CSS injection (reflected)",
+    "severity": "Medium",
+    "index_hex": "0x00501300",
+    "index_dec": 5247744,
+    "classifications": [
+      "CWE-73",
+      "CWE-20"
+    ]
+  },
+  {
+    "name": "CSS injection (stored)",
+    "severity": "Medium",
+    "index_hex": "0x00501301",
+    "index_dec": 5247745,
+    "classifications": [
+      "CWE-73",
+      "CWE-20"
+    ]
+  },
+  {
+    "name": "Client-side HTTP parameter pollution (reflected)",
+    "severity": "Low",
+    "index_hex": "0x00501400",
+    "index_dec": 5248000,
+    "classifications": [
+      "CWE-233",
+      "CWE-20"
+    ]
+  },
+  {
+    "name": "Client-side HTTP parameter pollution (stored)",
+    "severity": "Low",
+    "index_hex": "0x00501401",
+    "index_dec": 5248001,
+    "classifications": [
+      "CWE-233",
+      "CWE-20"
+    ]
+  },
+  {
+    "name": "Form action hijacking (reflected)",
+    "severity": "Medium",
+    "index_hex": "0x00501500",
+    "index_dec": 5248256,
+    "classifications": [
+      "CWE-73",
+      "CWE-20"
+    ]
+  },
+  {
+    "name": "Form action hijacking (stored)",
+    "severity": "Medium",
+    "index_hex": "0x00501501",
+    "index_dec": 5248257,
+    "classifications": [
+      "CWE-73",
+      "CWE-20"
+    ]
+  },
+  {
+    "name": "Database connection string disclosed",
+    "severity": "Medium",
+    "index_hex": "0x00600080",
+    "index_dec": 6291584,
+    "classifications": [
+      "CWE-15",
+      "CWE-497"
+    ]
+  },
+  {
+    "name": "Source code disclosure",
+    "severity": "Low",
+    "index_hex": "0x006000b0",
+    "index_dec": 6291632,
+    "classifications": [
+      "CWE-18",
+      "CWE-200",
+      "CWE-388",
+      "CWE-540",
+      "CWE-541",
+      "CWE-615"
+    ]
+  },
+  {
+    "name": "Backup file",
+    "severity": "Information",
+    "index_hex": "0x006000d8",
+    "index_dec": 6291672,
+    "classifications": [
+      "CWE-530"
+    ]
+  },
+  {
+    "name": "Directory listing",
+    "severity": "Information",
+    "index_hex": "0x00600100",
+    "index_dec": 6291712,
+    "classifications": [
+      "CWE-538",
+      "CWE-548"
+    ]
+  },
+  {
+    "name": "Email addresses disclosed",
+    "severity": "Information",
+    "index_hex": "0x00600200",
+    "index_dec": 6291968,
+    "classifications": [
+      "CWE-200"
+    ]
+  },
+  {
+    "name": "Private IP addresses disclosed",
+    "severity": "Information",
+    "index_hex": "0x00600300",
+    "index_dec": 6292224,
+    "classifications": [
+      "CWE-200"
+    ]
+  },
+  {
+    "name": "Social security numbers disclosed",
+    "severity": "Information",
+    "index_hex": "0x00600400",
+    "index_dec": 6292480,
+    "classifications": [
+      "CWE-200"
+    ]
+  },
+  {
+    "name": "Credit card numbers disclosed",
+    "severity": "Information",
+    "index_hex": "0x00600500",
+    "index_dec": 6292736,
+    "classifications": [
+      "CWE-200",
+      "CWE-388"
+    ]
+  },
+  {
+    "name": "Private key disclosed",
+    "severity": "Information",
+    "index_hex": "0x00600550",
+    "index_dec": 6292816,
+    "classifications": [
+      "CWE-200",
+      "CWE-388"
+    ]
+  },
+  {
+    "name": "Robots.txt file",
+    "severity": "Information",
+    "index_hex": "0x00600600",
+    "index_dec": 6292992,
+    "classifications": [
+      "CWE-200"
+    ]
+  },
+  {
+    "name": "Json Web Key Set disclosed",
+    "severity": "Information",
+    "index_hex": "0x00600700",
+    "index_dec": 6293248,
+    "classifications": [
+      "CWE-200"
+    ]
+  },
+  {
+    "name": "JWT private key disclosed",
+    "severity": "High",
+    "index_hex": "0x00600800",
+    "index_dec": 6293504,
+    "classifications": [
+      "CWE-200"
+    ]
+  },
+  {
+    "name": "OpenAPI definition found (active scan check)",
+    "severity": "Information",
+    "index_hex": "0x00600900",
+    "index_dec": 6293760,
+    "classifications": [
+      "CWE-200"
+    ]
+  },
+  {
+    "name": "OpenAPI definition found (passive scan check)",
+    "severity": "Information",
+    "index_hex": "0x00600901",
+    "index_dec": 6293761,
+    "classifications": [
+      "CWE-200"
+    ]
+  },
+  {
+    "name": "Cacheable HTTPS response",
+    "severity": "Information",
+    "index_hex": "0x00700100",
+    "index_dec": 7340288,
+    "classifications": [
+      "CWE-524",
+      "CWE-525"
+    ]
+  },
+  {
+    "name": "Base64-encoded data in parameter",
+    "severity": "Information",
+    "index_hex": "0x00700200",
+    "index_dec": 7340544,
+    "classifications": [
+      "CWE-310",
+      "CWE-311"
+    ]
+  },
+  {
+    "name": "Multiple content types specified",
+    "severity": "Information",
+    "index_hex": "0x00800100",
+    "index_dec": 8388864,
+    "classifications": [
+      "CWE-436"
+    ]
+  },
+  {
+    "name": "HTML does not specify charset",
+    "severity": "Information",
+    "index_hex": "0x00800200",
+    "index_dec": 8389120,
+    "classifications": [
+      "CWE-16",
+      "CWE-436"
+    ]
+  },
+  {
+    "name": "HTML uses unrecognized charset",
+    "severity": "Information",
+    "index_hex": "0x00800300",
+    "index_dec": 8389376,
+    "classifications": [
+      "CWE-16",
+      "CWE-436"
+    ]
+  },
+  {
+    "name": "Content type incorrectly stated",
+    "severity": "Low",
+    "index_hex": "0x00800400",
+    "index_dec": 8389632,
+    "classifications": [
+      "CWE-16",
+      "CWE-436"
+    ]
+  },
+  {
+    "name": "Content type is not specified",
+    "severity": "Information",
+    "index_hex": "0x00800500",
+    "index_dec": 8389888,
+    "classifications": [
+      "CWE-16"
+    ]
+  },
+  {
+    "name": "TLS certificate",
+    "severity": "Medium",
+    "index_hex": "0x01000100",
+    "index_dec": 16777472,
+    "classifications": [
+      "CWE-295",
+      "CWE-326",
+      "CWE-327"
+    ]
+  },
+  {
+    "name": "Unencrypted communications",
+    "severity": "Low",
+    "index_hex": "0x01000200",
+    "index_dec": 16777728,
+    "classifications": [
+      "CWE-326"
+    ]
+  },
+  {
+    "name": "Strict transport security not enforced",
+    "severity": "Low",
+    "index_hex": "0x01000300",
+    "index_dec": 16777984,
+    "classifications": [
+      "CWE-523"
+    ]
+  },
+  {
+    "name": "Mixed content",
+    "severity": "Information",
+    "index_hex": "0x01000400",
+    "index_dec": 16778240,
+    "classifications": [
+      "CWE-16",
+      "CWE-319"
+    ]
+  },
+  {
+    "name": "Hidden HTTP 2",
+    "severity": "Information",
+    "index_hex": "0x01000500",
+    "index_dec": 16778496,
+    "classifications": [
+      "CWE-912"
+    ]
+  },
+  {
+    "name": "Extension generated issue",
+    "severity": "Information",
+    "index_hex": "0x08000000",
+    "index_dec": 134217728,
+    "classifications": []
+  },
+  {
+    "name": "Manually generated issue",
+    "severity": "Information",
+    "index_hex": "0x08008000",
+    "index_dec": 134250496,
+    "classifications": []
+  },
+  {
+    "name": "BCheck generated issue",
+    "severity": "Information",
+    "index_hex": "0x09000000",
+    "index_dec": 150994944,
+    "classifications": []
+  },
+  {
+    "name": "Bambda generated issue",
+    "severity": "Information",
+    "index_hex": "0x09008000",
+    "index_dec": 151027712,
+    "classifications": []
+  }
+]

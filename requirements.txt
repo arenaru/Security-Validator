@@ -6,3 +6,4 @@ urllib3
 fpdf
 cvss
 bs4
+openpyxl
