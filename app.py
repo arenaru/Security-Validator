@@ -38,7 +38,7 @@ with st.sidebar:
         "TLS 1.0 Detection": "TLS 1.0 Detection",
         "TLS 1.1 Detection": "TLS 1.1 Detection",
         "HSTS Security": "HSTS Security Check",
-        "Security Headers": "Security Headers Check",
+        # "Security Headers": "Security Headers Check",
         "Cookie Secure Flag": "Cookie Secure Flag (Bash)",
         "Laravel Debug": "Laravel Debug Mode",
         "Node.js Debug": "Node.js Debug Mode",

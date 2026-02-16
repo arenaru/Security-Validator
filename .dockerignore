@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+*.pyo
+.git
+.gitignore
+.env
+.venv
+myenv/
+*.log
+temp_list.txt
+VA Scan Report/
+.DS_Store
