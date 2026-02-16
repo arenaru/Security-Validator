@@ -33,10 +33,13 @@ with st.sidebar:
     crawl = st.checkbox("Crawl (same-origin)", value=True)
     verify_tls = st.checkbox("Verify TLS", value=True)
 
+    timeout = st.slider("Timeout (seconds)", min_value=5, max_value=60, value=20, help="Connection timeout per request")
     max_pages = st.slider("Max pages", min_value=1, max_value=50, value=12)
     max_req = st.slider("Max requests per detector", min_value=1, max_value=100, value=20)
 
-    concurrency = st.slider("Concurrency", min_value=1, max_value=10, value=3)
+    concurrency = st.slider("Concurrency", min_value=1, max_value=10, value=3, help="Lower values (1-2) reduce risk of being blocked")
+    
+    st.caption("💡 Tip: If getting connection errors, try: concurrency=1, longer timeout")
 
 st.caption("Note: This is a Burp-like heuristic scanner. Aggressive mode may generate additional requests.")
 
@@ -59,6 +62,7 @@ def _scan_one(target: str):
         max_pages=max_pages,
         max_requests_per_detector=max_req,
         verify_tls=verify_tls,
+        timeout=timeout,
     )
     return scanner.scan_target(target)
 
@@ -141,6 +145,25 @@ if st.session_state["burp_results"]:
             _df_safe_for_excel(details_df).to_excel(writer, index=False, sheet_name="results")
         return bio.getvalue()
 
+    # Consolidated export for ALL domains
+    all_findings = []
+    for target, items in all_results.items():
+        for item in items:
+            finding = item.copy()
+            finding["target"] = target  # Ensure target is in each row
+            all_findings.append(finding)
+
+    if all_findings:
+        consolidated_xlsx = _to_xlsx_bytes(summary=summary_rows, details=all_findings)
+        st.download_button(
+            label="📥 Download All Domains (Consolidated Excel)",
+            data=consolidated_xlsx,
+            file_name="burp_all_domains.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            key="download_all_domains_burp",
+            use_container_width=True,
+        )
+
     st.write("---")
     st.subheader("Details")
 
@@ -172,6 +195,7 @@ if st.session_state["burp_results"]:
                 data=xlsx_bytes,
                 file_name="burp_scan_results.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                key=f"download_xlsx_{target}",
             )
 
             st.dataframe(pd.json_normalize(items), use_container_width=True, hide_index=True)

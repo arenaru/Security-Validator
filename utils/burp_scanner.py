@@ -4,11 +4,14 @@ import socket
 import ssl
 import os
 import uuid
+import time
 from urllib.parse import urlparse, urljoin, urlencode, parse_qsl
 
 import requests
 import urllib3
 from bs4 import BeautifulSoup
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 
 class BurpScanner:
@@ -152,21 +155,57 @@ class BurpScanner:
         base = f"{parsed.scheme}://{parsed.netloc}"
 
         session = requests.Session()
-        session.headers.update({"User-Agent": "BurpLikeScanner/1.1"})
+        # Use a realistic browser User-Agent to avoid being blocked
+        session.headers.update({
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.9",
+            "Accept-Encoding": "gzip, deflate, br",
+            "Connection": "keep-alive",
+        })
+        
+        # Configure retry strategy for connection issues
+        retry_strategy = Retry(
+            total=3,
+            backoff_factor=1,
+            status_forcelist=[429, 500, 502, 503, 504],
+            allowed_methods=["HEAD", "GET", "OPTIONS"]
+        )
+        adapter = HTTPAdapter(max_retries=retry_strategy, pool_connections=10, pool_maxsize=10)
+        session.mount("http://", adapter)
+        session.mount("https://", adapter)
 
-        # prefetch main response
-        try:
-            resp = session.get(target, timeout=self.timeout, allow_redirects=True, verify=self.verify_tls)
-        except requests.exceptions.SSLError as e:
-            # Fallback for environments without a working CA bundle
+        # prefetch main response with retry logic
+        max_retries = 3
+        last_error = None
+        resp = None
+        
+        for attempt in range(max_retries):
             try:
-                urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-                session.verify = False
-                resp = session.get(target, timeout=self.timeout, allow_redirects=True, verify=False)
-            except Exception as e2:
-                return [{"name": "connection", "status": "ERROR", "details": f"TLS verify failed; retry without verify also failed: {e2}"}]
-        except Exception as e:
-            return [{"name": "connection", "status": "ERROR", "details": str(e)}]
+                if attempt > 0:
+                    time.sleep(2 ** attempt)  # Exponential backoff: 2, 4 seconds
+                resp = session.get(target, timeout=self.timeout, allow_redirects=True, verify=self.verify_tls)
+                break  # Success, exit retry loop
+            except requests.exceptions.SSLError as e:
+                # Fallback for environments without a working CA bundle
+                try:
+                    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+                    session.verify = False
+                    resp = session.get(target, timeout=self.timeout, allow_redirects=True, verify=False)
+                    break  # Success
+                except Exception as e2:
+                    last_error = f"TLS verify failed; retry without verify also failed: {e2}"
+            except (requests.exceptions.ConnectionError, ConnectionResetError) as e:
+                last_error = f"Connection error (attempt {attempt + 1}/{max_retries}): {e}"
+                if attempt == max_retries - 1:
+                    return [{"name": "connection", "status": "ERROR", "details": f"{last_error}. Site may be blocking automated scans. Try reducing concurrency or enabling 'Verify TLS'."}]
+            except Exception as e:
+                last_error = str(e)
+                if attempt == max_retries - 1:
+                    return [{"name": "connection", "status": "ERROR", "details": last_error}]
+        
+        if resp is None:
+            return [{"name": "connection", "status": "ERROR", "details": last_error or "Failed to connect after retries"}]
 
         self._scan_context = self._build_scan_context(session=session, base=base, target=target, resp=resp)
         detector_cache = {}
@@ -179,6 +218,9 @@ class BurpScanner:
                 detector_cache[detector_key] = {"status": "NOT_IMPLEMENTED", "details": f"Detector '{detector_key}' not registered"}
                 return detector_cache[detector_key]
             try:
+                # Small delay between detector calls to avoid overwhelming the server
+                if detector_cache:  # Not the first detector
+                    time.sleep(0.5)
                 detector_cache[detector_key] = func(session, base, target, resp)
             except Exception as e:
                 detector_cache[detector_key] = {"status": "ERROR", "details": str(e)}

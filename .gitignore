@@ -1,3 +1,28 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+myenv/
+.venv/
+venv/
+env/
+
+# Streamlit
+.streamlit/
+
+# Local artifacts / outputs
+temp_list.txt
+temp_*.txt
+VA Scan Report/
+*.xlsx
+*.pdf
+*.log
+
+# OS
+desktop.ini
+Thumbs.db
 # Python
 __pycache__/
 *.pyc
