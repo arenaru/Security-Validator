@@ -36,7 +36,8 @@ Thumbs.db
 # Project specific
 temp_list.txt
 *.log
-VA Scan Report/
+VA Scan Report
+*.txt
 .streamlit/
 
 # Misc
