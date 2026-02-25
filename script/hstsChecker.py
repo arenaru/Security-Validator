@@ -8,7 +8,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # ============================
 # CONFIGURATION
 # ============================
-TIMEOUT = 10
+TIMEOUT = 15  # Increased for serverless environments (Vercel, AWS Lambda, etc.)
 THREADS = 20  # Fast scanning
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"
 
@@ -23,12 +23,20 @@ def run_hsts_scan(targets):
     # Fungsi worker untuk 1 URL
     def scan_single(url):
         target = url.strip()
-        if not target.startswith("http"): target = f"https://{target}"
+        # Force HTTPS to properly check HSTS (HSTS only works over HTTPS)
+        if target.startswith("http://"):
+            target = target.replace("http://", "https://", 1)
+        elif not target.startswith("https://"):
+            target = f"https://{target}"
         headers = {'User-Agent': USER_AGENT}
 
         try:
             # allow_redirects=True PENTING: Header HSTS harus ada di final destination
             r = requests.get(target, headers=headers, timeout=TIMEOUT, verify=False, allow_redirects=True)
+            
+            # Ensure we received HTTPS response (HSTS is only valid over HTTPS)
+            if not r.url.startswith('https://'):
+                return False, f"{target} | ERROR | Final URL not HTTPS (got {r.url})"
             
             # Cek Header HSTS (Case Insensitive sudah dihandle requests.headers)
             hsts = r.headers.get('Strict-Transport-Security')
