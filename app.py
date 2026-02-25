@@ -67,7 +67,7 @@ with st.sidebar:
         "TLS 1.1 Detection": "TLS 1.1 Detection",
         "HSTS Security": "HSTS Security Check",
         # "Security Headers": "Security Headers Check",
-        "Cookie Secure Flag": "Cookie Secure Flag (Bash)",
+        "Cookie Secure Flag": "Cookie Secure Flag",
         "Laravel Debug": "Laravel Debug Mode",
         "Node.js Debug": "Node.js Debug Mode",
         "PHP Version Disclosure": "PHP Version Disclosure"
@@ -117,7 +117,7 @@ if st.session_state["scan_results"]:
         {"key": "TLS 1.1 Detection", "func": render_tlsv11_card},
         {"key": "HSTS Security Check", "func": render_hsts_card},
         {"key": "Security Headers Check", "func": render_header_card},
-        {"key": "Cookie Secure Flag (Bash)", "func": render_cookie_card},
+        {"key": "Cookie Secure Flag", "func": render_cookie_card},
         {"key": "Laravel Debug Mode", "func": render_laravel_card},
         {"key": "Node.js Debug Mode", "func": render_node_card},
         {"key": "PHP Version Disclosure", "func": render_phpversion_card}

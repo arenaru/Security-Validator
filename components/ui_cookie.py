@@ -1,42 +1,31 @@
 import streamlit as st
 import pandas as pd
 
-def render_cookie_card(raw_output_bash):
-    st.subheader("🍪 Cookie (Bash)")
+def render_cookie_card(results):
+    st.subheader("🍪 Cookie Security Check")
     
-    # Cek apakah output bash ada isinya (String tidak kosong)
-    if raw_output_bash and raw_output_bash.strip():
+    # Results is a list of dicts from cookieSecure.py
+    if results and isinstance(results, list):
+        # Convert to DataFrame
+        df_cookie = pd.DataFrame(results)
         
-        # Split output menjadi list per baris
-        lines = raw_output_bash.splitlines()
-        data_cookie = []
-
-        for line in lines:
-            # Format dari script bash: URL|STATUS|MSG
-            parts = line.split("|")
-            if len(parts) == 3:
-                data_cookie.append({
-                    "URL": parts[0],
-                    "Status": parts[1],
-                    "Keterangan": parts[2]
-                })
+        # Rename columns for display
+        df_cookie.columns = ['URL', 'Status', 'Message']
         
-        # Render jika parsing berhasil
-        if data_cookie:
-            df_cookie = pd.DataFrame(data_cookie)
-            st.dataframe(df_cookie, use_container_width=True)
-            
-            vuln_count = df_cookie[df_cookie['Status'] == 'VULNERABLE'].shape[0]
-            err_count = df_cookie[df_cookie['Status'] == 'ERROR'].shape[0]
+        # Display table
+        st.dataframe(df_cookie, use_container_width=True)
+        
+        # Count vulnerabilities and errors
+        vuln_count = df_cookie[df_cookie['Status'] == 'VULNERABLE'].shape[0]
+        err_count = df_cookie[df_cookie['Status'] == 'ERROR'].shape[0]
+        safe_count = df_cookie[df_cookie['Status'] == 'SAFE'].shape[0]
 
-            if vuln_count > 0:
-                st.error(f"⚠️ {vuln_count} Vulnerable Cookies Found!")
-            elif err_count > 0:
-                st.error(f"⚠️ {err_count} Domain(s) Error!")
-            else:
-                st.success("✅ All Cookies Secure!")
+        # Show only highest priority message
+        if vuln_count > 0:
+            st.error(f"⚠️ {vuln_count} site(s) with insecure cookies found!")
+        elif err_count > 0:
+            st.warning(f"⚠️ {err_count} site(s) had connection errors")
         else:
-            st.warning("Format output bash tidak sesuai (Cek script bash).")
-            st.code(raw_output_bash) # Debugging: Tampilkan raw output
+            st.success(f"✅ All {safe_count} site(s) have secure cookies!")
     else:
-        st.warning("Tidak ada output dari script bash (Mungkin error/kosong).")
+        st.warning("No cookie data available")

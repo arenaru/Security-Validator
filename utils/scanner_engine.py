@@ -12,15 +12,7 @@ from script.sslv3 import check_sslv3
 from script.tlsv10 import check_tls10
 from script.tlsv11 import check_tls11
 from script.phpVersion import run_php_scan
-
-# Helper function untuk Bash
-def run_bash_worker(file_path):
-    cmd = ["bash", "script/check_secure.sh", file_path]
-    try:
-        process = subprocess.run(cmd, capture_output=True, text=True)
-        return process.stdout
-    except:
-        return None
+from script.cookieSecure import run_cookie_scan
 
 def start_scanning_engine(targets_list, selected_scans, temp_file_path):
     """
@@ -52,8 +44,8 @@ def start_scanning_engine(targets_list, selected_scans, temp_file_path):
         if "Security Headers Check" in selected_scans:
             futures["Security Headers Check"] = executor.submit(check_security_headers, targets_list)
         
-        if "Cookie Secure Flag (Bash)" in selected_scans:
-            futures["Cookie Secure Flag (Bash)"] = executor.submit(run_bash_worker, temp_file_path)
+        if "Cookie Secure Flag" in selected_scans:
+            futures["Cookie Secure Flag"] = executor.submit(run_cookie_scan, targets_list)
         
         if "Laravel Debug Mode" in selected_scans:
             futures["Laravel Debug Mode"] = executor.submit(run_laravel_scan, targets_list)
