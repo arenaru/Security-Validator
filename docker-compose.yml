@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  secval:
+    build: .
+    container_name: secval-app
+    ports:
+      - "8501:8501"
+    restart: unless-stopped
+    environment:
+      - TZ=Asia/Jakarta
+    # Optional: Mount volumes for persistent data
+    # volumes:
+    #   - ./temp_list.txt:/app/temp_list.txt
