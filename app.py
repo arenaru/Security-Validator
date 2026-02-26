@@ -66,7 +66,7 @@ with st.sidebar:
         "TLS 1.0 Detection": "TLS 1.0 Detection",
         "TLS 1.1 Detection": "TLS 1.1 Detection",
         "HSTS Security": "HSTS Security Check",
-        # "Security Headers": "Security Headers Check",
+        "Security Headers": "Security Headers Check",
         "Cookie Secure Flag": "Cookie Secure Flag",
         "Laravel Debug": "Laravel Debug Mode",
         "Node.js Debug": "Node.js Debug Mode",
@@ -131,7 +131,7 @@ if st.session_state["scan_results"]:
             with cols[i % 3]:
                 data = scan_results[module["key"]]
                 # Render hanya jika data tidak kosong/None
-                if data: 
+                if data:
                     module["func"](data)
                 else:
                     st.info(f"No results for {module['key']}")

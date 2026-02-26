@@ -4,7 +4,7 @@ import pandas as pd
 def render_header_card(header_results):
     st.subheader("🛡️ Security Headers")
     
-    if header_results:
+    if header_results is not None and (isinstance(header_results, list) and len(header_results) > 0):
         df_headers = pd.DataFrame(header_results)
         st.dataframe(df_headers, use_container_width=True)
         
@@ -17,4 +17,4 @@ def render_header_card(header_results):
             else:
                 st.success("✅ Headers Complete!")
     else:
-        st.warning("Data empty or scan failed.")
+        st.error("❌ No data or scan failed. Check logs.")

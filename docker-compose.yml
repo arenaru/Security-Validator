@@ -9,6 +9,9 @@ services:
     restart: unless-stopped
     environment:
       - TZ=Asia/Jakarta
-    # Optional: Mount volumes for persistent data
-    # volumes:
-    #   - ./temp_list.txt:/app/temp_list.txt
+    volumes:
+      - ./app.py:/app/app.py
+      - ./components:/app/components
+      - ./script:/app/script
+      - ./utils:/app/utils
+      - ./static:/app/static

@@ -63,5 +63,7 @@ def start_scanning_engine(targets_list, selected_scans, temp_file_path):
             except Exception as e:
                 scan_results[scan_type] = None
                 print(f"[Error] {scan_type} failed: {e}")
+                import traceback
+                traceback.print_exc()
             
     return scan_results
