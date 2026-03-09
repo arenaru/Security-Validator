@@ -15,6 +15,8 @@ from components.ui_sslv3 import render_sslv3_card
 from components.ui_tlsv10 import render_tlsv10_card
 from components.ui_tlsv11 import render_tlsv11_card
 from components.ui_phpversion import render_phpversion_card
+from components.ui_httponly import render_httponly_card
+from components.ui_ssl_hostname import render_ssl_hostname_card
 
 # Import Engine
 from utils.scanner_engine import start_scanning_engine
@@ -61,13 +63,15 @@ with st.sidebar:
     select_all = st.checkbox("Choose All", value=False)
     
     scan_map = {
-        "SSL Certificate": "SSL Certificate Check",
+        "SSL Certificate Expired": "SSL Certificate Check",
+        "SSL Hostname Mismatch": "SSL Certificate Hostname Mismatch",
         "SSLv3 Detection": "SSLv3 Detection",
         "TLS 1.0 Detection": "TLS 1.0 Detection",
         "TLS 1.1 Detection": "TLS 1.1 Detection",
         "HSTS Security": "HSTS Security Check",
         "Security Headers": "Security Headers Check",
         "Cookie Secure Flag": "Cookie Secure Flag",
+        "Cookie HttpOnly Flag": "Cookie HttpOnly Flag",
         "Laravel Debug": "Laravel Debug Mode",
         "Node.js Debug": "Node.js Debug Mode",
         "PHP Version Disclosure": "PHP Version Disclosure"
@@ -112,12 +116,14 @@ if st.session_state["scan_results"]:
     # Format Engine Baru: { "SSL Certificate Check": [...], ... }
     ui_modules = [
         {"key": "SSL Certificate Check", "func": render_ssl_card},
+        {"key": "SSL Certificate Hostname Mismatch", "func": render_ssl_hostname_card},
         {"key": "SSLv3 Detection", "func": render_sslv3_card},
         {"key": "TLS 1.0 Detection", "func": render_tlsv10_card},
         {"key": "TLS 1.1 Detection", "func": render_tlsv11_card},
         {"key": "HSTS Security Check", "func": render_hsts_card},
         {"key": "Security Headers Check", "func": render_header_card},
         {"key": "Cookie Secure Flag", "func": render_cookie_card},
+        {"key": "Cookie HttpOnly Flag", "func": render_httponly_card},
         {"key": "Laravel Debug Mode", "func": render_laravel_card},
         {"key": "Node.js Debug Mode", "func": render_node_card},
         {"key": "PHP Version Disclosure", "func": render_phpversion_card}

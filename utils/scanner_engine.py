@@ -13,6 +13,8 @@ from script.tlsv10 import check_tls10
 from script.tlsv11 import check_tls11
 from script.phpVersion import run_php_scan
 from script.cookieSecure import run_cookie_scan
+from script.cookieHttpOnly import run_cookie_httponly_scan
+from script.sslHostnameMismatch import run_ssl_hostname_mismatch_scan
 
 def start_scanning_engine(targets_list, selected_scans, temp_file_path):
     """
@@ -28,6 +30,12 @@ def start_scanning_engine(targets_list, selected_scans, temp_file_path):
         
         if "SSL Certificate Check" in selected_scans:
             futures["SSL Certificate Check"] = executor.submit(run_ssl_scan, temp_file_path)
+
+        if "SSL Certificate Hostname Mismatch" in selected_scans:
+            futures["SSL Certificate Hostname Mismatch"] = executor.submit(
+                run_ssl_hostname_mismatch_scan,
+                temp_file_path,
+            )
         
         if "SSLv3 Detection" in selected_scans:
             futures["SSLv3 Detection"] = executor.submit(lambda: [check_sslv3(target) for target in targets_list])
@@ -46,6 +54,9 @@ def start_scanning_engine(targets_list, selected_scans, temp_file_path):
         
         if "Cookie Secure Flag" in selected_scans:
             futures["Cookie Secure Flag"] = executor.submit(run_cookie_scan, targets_list)
+
+        if "Cookie HttpOnly Flag" in selected_scans:
+            futures["Cookie HttpOnly Flag"] = executor.submit(run_cookie_httponly_scan, targets_list)
         
         if "Laravel Debug Mode" in selected_scans:
             futures["Laravel Debug Mode"] = executor.submit(run_laravel_scan, targets_list)
