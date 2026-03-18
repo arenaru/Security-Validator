@@ -1,6 +1,7 @@
 import requests
 import urllib3
 import concurrent.futures
+from urllib.parse import urlparse
 
 # Matikan warning SSL
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -31,75 +32,81 @@ def get_signatures():
 
 def fix_url(url):
     url = url.strip()
-    if not url.startswith("http"):
-        url = "https://" + url
-    return url.rstrip('/')
+    url = url.rstrip('/')
+    if url.startswith(('http://', 'https://')):
+        parsed = urlparse(url)
+        host = parsed.netloc or parsed.path
+        path = parsed.path if parsed.netloc else ""
+        if parsed.query:
+            path = f"{path}?{parsed.query}"
+        candidates = [f"https://{host}{path}", f"http://{host}{path}"]
+        return list(dict.fromkeys(candidates))
+    return [f"https://{url}", f"http://{url}"]
 
 def scan_single_target(target):
-    url = fix_url(target)
+    candidate_urls = fix_url(target)
     signatures = get_signatures()
-    
-    # Default Result
-    result = {
-        "URL": url,
-        "status": "SECURE",
-        "payload": "-",
-        "finding": "Debug mode disabled",
-        "vuln_name": None # <--- Field Wajib untuk PDF Gen
-    }
+    last_error = None
 
-    endpoints = [
-        url, 
-        f"{url}/index.php", 
-        f"{url}/api/index.php"
-    ]
-    
-    methods = ['PUT', 'PATCH', 'DELETE', 'POST']
+    for url in candidate_urls:
+        # Default Result
+        result = {
+            "URL": url,
+            "status": "SECURE",
+            "payload": "-",
+            "finding": "Debug mode disabled",
+            "vuln_name": None # <--- Field Wajib untuk PDF Gen
+        }
 
-    try:
-        # --- PHASE 1: Ignition RCE Check (CRITICAL) ---
+        endpoints = [
+            url,
+            f"{url}/index.php",
+            f"{url}/api/index.php"
+        ]
+
+        methods = ['PUT', 'PATCH', 'DELETE', 'POST']
+
         try:
+            # --- PHASE 1: Ignition RCE Check (CRITICAL) ---
             target_ign = f"{url}/_ignition/health-check"
             r_health = requests.get(target_ign, headers=HEADERS, timeout=TIMEOUT, verify=False)
             if r_health.status_code == 200 and "can_execute_commands" in r_health.text:
                 result["status"] = "CRITICAL"
-                result["payload"] = f"GET {target_ign}" 
+                result["payload"] = f"GET {target_ign}"
                 result["finding"] = "Ignition RCE Exposed"
                 # RCE biasanya efek dari Debug Mode yang terekspos juga
                 # Kita mapping ke nama standar agar kedetect Severity-nya
-                result["vuln_name"] = "Laravel debug mode enabled" 
+                result["vuln_name"] = "Laravel debug mode enabled"
                 return result
-        except:
-            pass
 
-        # --- PHASE 2: Method Fuzzing (WARNING) ---
-        for endpoint in endpoints:
-            for method in methods:
-                try:
-                    resp = requests.request(
-                        method=method,
-                        url=endpoint,
-                        headers=HEADERS,
-                        timeout=TIMEOUT,
-                        verify=False
-                    )
+            # --- PHASE 2: Method Fuzzing (WARNING) ---
+            for endpoint in endpoints:
+                for method in methods:
+                    try:
+                        resp = requests.request(
+                            method=method,
+                            url=endpoint,
+                            headers=HEADERS,
+                            timeout=TIMEOUT,
+                            verify=False
+                        )
 
-                    for sig in signatures:
-                        if sig in resp.text:
-                            result["status"] = "WARNING"
-                            path_only = endpoint.replace(url, "")
-                            if path_only == "": path_only = "/"
-                            
-                            result["payload"] = f"{method} {path_only}"
-                            result["finding"] = f"Signature Found: {sig}"
-                            # Mapping ke nama standar Acunetix
-                            result["vuln_name"] = "Laravel debug mode enabled"
-                            return result 
-                except:
-                    continue
-        
-        # --- PHASE 3: 404 Trigger (WARNING) ---
-        try:
+                        for sig in signatures:
+                            if sig in resp.text:
+                                result["status"] = "WARNING"
+                                path_only = endpoint.replace(url, "")
+                                if path_only == "":
+                                    path_only = "/"
+
+                                result["payload"] = f"{method} {path_only}"
+                                result["finding"] = f"Signature Found: {sig}"
+                                # Mapping ke nama standar Acunetix
+                                result["vuln_name"] = "Laravel debug mode enabled"
+                                return result
+                    except requests.exceptions.RequestException:
+                        continue
+
+            # --- PHASE 3: 404 Trigger (WARNING) ---
             bad_path = "/halaman_ini_pasti_tidak_ada_12345"
             r_404 = requests.get(f"{url}{bad_path}", headers=HEADERS, timeout=TIMEOUT, verify=False)
             for sig in signatures:
@@ -110,15 +117,32 @@ def scan_single_target(target):
                     # Mapping ke nama standar Acunetix
                     result["vuln_name"] = "Laravel debug mode enabled"
                     return result
-        except:
-            pass
 
-    except Exception as e:
-        result["status"] = "ERROR"
-        result["finding"] = str(e)
-        result["vuln_name"] = None
+            return result
 
-    return result
+        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
+            last_error = (url, str(e))
+            continue
+        except Exception as e:
+            last_error = (url, str(e))
+            continue
+
+    if last_error:
+        return {
+            "URL": last_error[0],
+            "status": "ERROR",
+            "payload": "-",
+            "finding": last_error[1],
+            "vuln_name": None
+        }
+
+    return {
+        "URL": target.strip(),
+        "status": "ERROR",
+        "payload": "-",
+        "finding": "Unknown Error",
+        "vuln_name": None
+    }
 
 def run_laravel_scan(targets_list, max_threads=20):
     results = []

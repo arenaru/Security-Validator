@@ -1,8 +1,25 @@
 import requests
 import urllib3
+from urllib.parse import urlparse
 
 # Suppress SSL warnings
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+
+def build_target_candidates(target):
+    """
+    Return request candidates in priority order: HTTPS first, then HTTP.
+    """
+    target = target.strip().rstrip('/')
+    if target.startswith(('http://', 'https://')):
+        parsed = urlparse(target)
+        host = parsed.netloc or parsed.path
+        path = parsed.path if parsed.netloc else ""
+        if parsed.query:
+            path = f"{path}?{parsed.query}"
+        candidates = [f"https://{host}{path}", f"http://{host}{path}"]
+        return list(dict.fromkeys(candidates))
+    return [f"https://{target}", f"http://{target}"]
 
 
 # Cookies that are commonly designed to be readable by browser JS (e.g., CSRF token cookies).
@@ -84,102 +101,115 @@ def check_cookie_httponly(target):
     Check whether cookies are marked with HttpOnly flag.
     Returns: dict with url, status, message.
     """
-    target = target.strip()
+    candidates = build_target_candidates(target)
+    last_error = None
 
-    if not target.startswith(('http://', 'https://')):
-        target = f"https://{target}"
+    for candidate in candidates:
+        try:
+            session = requests.Session()
+            response = session.get(
+                candidate,
+                timeout=(3, 5),
+                verify=False,
+                allow_redirects=True,
+                headers={'User-Agent': 'Mozilla/5.0'}
+            )
 
-    target = target.rstrip('/')
+            all_cookies = {}
 
-    try:
-        session = requests.Session()
-        response = session.get(
-            target,
-            timeout=(3, 5),
-            verify=False,
-            allow_redirects=True,
-            headers={'User-Agent': 'Mozilla/5.0'}
-        )
+            for hist_response in response.history:
+                parse_set_cookie_header(hist_response, all_cookies)
 
-        all_cookies = {}
+            parse_set_cookie_header(response, all_cookies)
 
-        for hist_response in response.history:
-            parse_set_cookie_header(hist_response, all_cookies)
+            # Fill missing cookies from cookie jar (best effort for HttpOnly attribute).
+            for cookie in session.cookies:
+                cookie_name = cookie.name
+                jar_httponly = hasattr(cookie, 'has_nonstandard_attr') and cookie.has_nonstandard_attr('HttpOnly')
+                # Do not overwrite a positive header-based result with False from cookie jar.
+                previous_flag = all_cookies.get(cookie_name, {}).get('httponly', False)
+                all_cookies[cookie_name] = {
+                    'httponly': bool(previous_flag or jar_httponly)
+                }
 
-        parse_set_cookie_header(response, all_cookies)
+            if not all_cookies:
+                return {
+                    "url": candidate,
+                    "status": "INFO",
+                    "message": "No Cookies Found"
+                }
 
-        # Fill missing cookies from cookie jar (best effort for HttpOnly attribute).
-        for cookie in session.cookies:
-            cookie_name = cookie.name
-            jar_httponly = hasattr(cookie, 'has_nonstandard_attr') and cookie.has_nonstandard_attr('HttpOnly')
-            # Do not overwrite a positive header-based result with False from cookie jar.
-            previous_flag = all_cookies.get(cookie_name, {}).get('httponly', False)
-            all_cookies[cookie_name] = {
-                'httponly': bool(previous_flag or jar_httponly)
-            }
+            missing_httponly = []
+            excluded_cookies = []
 
-        if not all_cookies:
-            return {
-                "url": target,
-                "status": "INFO",
-                "message": "No Cookies Found"
-            }
+            for cookie_name, cookie_attrs in all_cookies.items():
+                if is_cookie_excluded(cookie_name):
+                    excluded_cookies.append(cookie_name)
+                    continue
 
-        missing_httponly = []
-        excluded_cookies = []
+                if cookie_attrs.get('httponly', False):
+                    continue
+                else:
+                    missing_httponly.append(cookie_name)
 
-        for cookie_name, cookie_attrs in all_cookies.items():
-            if is_cookie_excluded(cookie_name):
-                excluded_cookies.append(cookie_name)
-                continue
+            if missing_httponly:
+                cookie_names = ", ".join(missing_httponly)
+                excluded_note = ""
+                if excluded_cookies:
+                    excluded_note = f" (excluded: {', '.join(excluded_cookies)})"
+                return {
+                    "url": candidate,
+                    "status": "VULNERABLE",
+                    "message": f"Cookies without HttpOnly: {cookie_names}{excluded_note}"
+                }
 
-            if cookie_attrs.get('httponly', False):
-                continue
-            else:
-                missing_httponly.append(cookie_name)
-
-        if missing_httponly:
-            cookie_names = ", ".join(missing_httponly)
-            excluded_note = ""
             if excluded_cookies:
-                excluded_note = f" (excluded: {', '.join(excluded_cookies)})"
-            return {
-                "url": target,
-                "status": "VULNERABLE",
-                "message": f"Cookies without HttpOnly: {cookie_names}{excluded_note}"
-            }
+                return {
+                    "url": candidate,
+                    "status": "SAFE",
+                    "message": f"All applicable cookies are HttpOnly (excluded: {', '.join(excluded_cookies)})"
+                }
 
-        if excluded_cookies:
             return {
-                "url": target,
+                "url": candidate,
                 "status": "SAFE",
-                "message": f"All applicable cookies are HttpOnly (excluded: {', '.join(excluded_cookies)})"
+                "message": "All Cookies are HttpOnly"
             }
 
-        return {
-            "url": target,
-            "status": "SAFE",
-            "message": "All Cookies are HttpOnly"
-        }
+        except requests.exceptions.Timeout:
+            last_error = ("timeout", candidate)
+            continue
+        except requests.exceptions.ConnectionError:
+            last_error = ("connection", candidate)
+            continue
+        except Exception as e:
+            last_error = ("other", candidate, str(e))
+            continue
 
-    except requests.exceptions.Timeout:
+    if last_error and last_error[0] == "timeout":
         return {
-            "url": target,
+            "url": last_error[1],
             "status": "ERROR",
             "message": "Connection Timeout"
         }
-    except requests.exceptions.ConnectionError:
+    if last_error and last_error[0] == "connection":
         return {
-            "url": target,
+            "url": last_error[1],
             "status": "ERROR",
             "message": "Connection Refused"
         }
-    except Exception as e:
+    if last_error and last_error[0] == "other":
         return {
-            "url": target,
+            "url": last_error[1],
             "status": "ERROR",
-            "message": f"Error: {str(e)[:50]}"
+            "message": f"Error: {last_error[2][:50]}"
         }
+
+    return {
+        "url": target.strip(),
+        "status": "ERROR",
+        "message": "Unknown Error"
+    }
 
 
 def run_cookie_httponly_scan(targets_list):

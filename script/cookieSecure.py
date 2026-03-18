@@ -5,6 +5,22 @@ from urllib.parse import urlparse
 # Suppress SSL warnings
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
+
+def build_target_candidates(target):
+    """
+    Return request candidates in priority order: HTTPS first, then HTTP.
+    """
+    target = target.strip().rstrip('/')
+    if target.startswith(('http://', 'https://')):
+        parsed = urlparse(target)
+        host = parsed.netloc or parsed.path
+        path = parsed.path if parsed.netloc else ""
+        if parsed.query:
+            path = f"{path}?{parsed.query}"
+        candidates = [f"https://{host}{path}", f"http://{host}{path}"]
+        return list(dict.fromkeys(candidates))
+    return [f"https://{target}", f"http://{target}"]
+
 def parse_set_cookie_header(response_obj, cookies_dict):
     """
     Parse all Set-Cookie headers to extract cookie names and security attributes
@@ -62,97 +78,107 @@ def check_cookie_security(target):
     Check if cookies are marked with Secure flag
     Returns: dict with url, status, message
     """
-    # Clean and normalize target
-    target = target.strip()
-    
-    # Add https:// if no scheme
-    if not target.startswith(('http://', 'https://')):
-        target = f"https://{target}"
-    
-    # Remove trailing slash
-    target = target.rstrip('/')
-    
-    try:
-        # Create session to capture all cookies across redirects
-        session = requests.Session()
-        
-        # Make request with timeout
-        response = session.get(
-            target,
-            timeout=(3, 5),  # connect timeout 3s, read timeout 5s
-            verify=False,
-            allow_redirects=True,
-            headers={'User-Agent': 'Mozilla/5.0'}
-        )
-        
-        # Parse Set-Cookie headers from response and all redirects
-        all_cookies = {}
-        
-        # Check history (redirects)
-        for hist_response in response.history:
-            parse_set_cookie_header(hist_response, all_cookies)
-        
-        # Check final response
-        parse_set_cookie_header(response, all_cookies)
-        
-        # Also get cookies from session jar (as fallback and to update attributes)
-        for cookie in session.cookies:
-            cookie_name = cookie.name
-            # Update or add cookie info from session jar
-            all_cookies[cookie_name] = {
-                'secure': cookie.secure,
-                'httponly': hasattr(cookie, 'has_nonstandard_attr') and cookie.has_nonstandard_attr('HttpOnly')
-            }
-        
-        if not all_cookies:
-            return {
-                "url": target,
-                "status": "INFO",
-                "message": "No Cookies Found"
-            }
-        
-        # Check if all cookies have Secure flag
-        insecure_cookies = []
-        secure_cookies = []
-        
-        for cookie_name, cookie_attrs in all_cookies.items():
-            if cookie_attrs.get('secure', False):
-                secure_cookies.append(cookie_name)
+    candidates = build_target_candidates(target)
+    last_error = None
+
+    for candidate in candidates:
+        try:
+            # Create session to capture all cookies across redirects
+            session = requests.Session()
+
+            # Make request with timeout
+            response = session.get(
+                candidate,
+                timeout=(3, 5),  # connect timeout 3s, read timeout 5s
+                verify=False,
+                allow_redirects=True,
+                headers={'User-Agent': 'Mozilla/5.0'}
+            )
+
+            # Parse Set-Cookie headers from response and all redirects
+            all_cookies = {}
+
+            # Check history (redirects)
+            for hist_response in response.history:
+                parse_set_cookie_header(hist_response, all_cookies)
+
+            # Check final response
+            parse_set_cookie_header(response, all_cookies)
+
+            # Also get cookies from session jar (as fallback and to update attributes)
+            for cookie in session.cookies:
+                cookie_name = cookie.name
+                # Update or add cookie info from session jar
+                all_cookies[cookie_name] = {
+                    'secure': cookie.secure,
+                    'httponly': hasattr(cookie, 'has_nonstandard_attr') and cookie.has_nonstandard_attr('HttpOnly')
+                }
+
+            if not all_cookies:
+                return {
+                    "url": candidate,
+                    "status": "INFO",
+                    "message": "No Cookies Found"
+                }
+
+            # Check if all cookies have Secure flag
+            insecure_cookies = []
+            secure_cookies = []
+
+            for cookie_name, cookie_attrs in all_cookies.items():
+                if cookie_attrs.get('secure', False):
+                    secure_cookies.append(cookie_name)
+                else:
+                    insecure_cookies.append(cookie_name)
+
+            if insecure_cookies:
+                cookie_names = ", ".join(insecure_cookies)
+                return {
+                    "url": candidate,
+                    "status": "VULNERABLE",
+                    "message": f"Insecure Cookies: {cookie_names}"
+                }
             else:
-                insecure_cookies.append(cookie_name)
-        
-        if insecure_cookies:
-            cookie_names = ", ".join(insecure_cookies)
-            return {
-                "url": target,
-                "status": "VULNERABLE",
-                "message": f"Insecure Cookies: {cookie_names}"
-            }
-        else:
-            return {
-                "url": target,
-                "status": "SAFE",
-                "message": "All Cookies are Secure"
-            }
-            
-    except requests.exceptions.Timeout:
+                return {
+                    "url": candidate,
+                    "status": "SAFE",
+                    "message": "All Cookies are Secure"
+                }
+
+        except requests.exceptions.Timeout:
+            last_error = ("timeout", candidate)
+            continue
+        except requests.exceptions.ConnectionError:
+            last_error = ("connection", candidate)
+            continue
+        except Exception as e:
+            last_error = ("other", candidate, str(e))
+            continue
+
+    if last_error and last_error[0] == "timeout":
         return {
-            "url": target,
+            "url": last_error[1],
             "status": "ERROR",
             "message": "Connection Timeout"
         }
-    except requests.exceptions.ConnectionError:
+    if last_error and last_error[0] == "connection":
         return {
-            "url": target,
+            "url": last_error[1],
             "status": "ERROR",
             "message": "Connection Refused"
         }
-    except Exception as e:
+    if last_error and last_error[0] == "other":
         return {
-            "url": target,
+            "url": last_error[1],
             "status": "ERROR",
-            "message": f"Error: {str(e)[:50]}"
+            "message": f"Error: {last_error[2][:50]}"
         }
+
+    return {
+        "url": target.strip(),
+        "status": "ERROR",
+        "message": "Unknown Error"
+    }
 
 def run_cookie_scan(targets_list):
     """
