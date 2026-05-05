@@ -46,7 +46,7 @@ def render_ssl_card(hasil_ssl):
             elif err_count > 0:
                 st.error(f"⚠️ {err_count} Domain(s) Error!")
             elif warning_count > 0:
-                st.warning(f"⚠️ {warning_count} Domain(s) Expiring Soon!")
+                st.warning(f"⚠️ {warning_count} Domain(s) Warning!")
             else:
                 st.success("✅ All SSL Valid")
     else:
