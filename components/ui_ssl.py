@@ -36,14 +36,17 @@ def render_ssl_card(hasil_ssl):
         
         # Summary Statistik
         if 'Status' in df.columns:
-            # Hitung yang statusnya 'Error' atau 'EXPIRED'
-            vuln_count = df[df['Status'].str.lower().isin(['expired'])].shape[0]
+            # Hitung yang statusnya 'EXPIRED', 'WARNING', atau 'Error'
+            expired_count = df[df['Status'].str.lower().isin(['expired'])].shape[0]
+            warning_count = df[df['Status'].str.lower().isin(['warning'])].shape[0]
             err_count = df[df['Status'].str.lower().isin(['error'])].shape[0]
             
-            if vuln_count > 0:
-                st.error(f"⚠️ {vuln_count} Domain(s) Expired!")
+            if expired_count > 0:
+                st.error(f"⚠️ {expired_count} Domain(s) Expired!")
             elif err_count > 0:
                 st.error(f"⚠️ {err_count} Domain(s) Error!")
+            elif warning_count > 0:
+                st.warning(f"⚠️ {warning_count} Domain(s) Expiring Soon!")
             else:
                 st.success("✅ All SSL Valid")
     else:
