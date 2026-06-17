@@ -17,6 +17,7 @@ from components.ui_tlsv11 import render_tlsv11_card
 from components.ui_phpversion import render_phpversion_card
 from components.ui_httponly import render_httponly_card
 from components.ui_ssl_hostname import render_ssl_hostname_card
+from components.ui_response_code import render_response_code_card
 
 # Import Engine
 from utils.scanner_engine import start_scanning_engine
@@ -68,6 +69,7 @@ with st.sidebar:
         "SSLv3 Detection": "SSLv3 Detection",
         "TLS 1.0 Detection": "TLS 1.0 Detection",
         "TLS 1.1 Detection": "TLS 1.1 Detection",
+        "Response Code": "Response Code Check",
         "HSTS Security": "HSTS Security Check",
         "Security Headers": "Security Headers Check",
         "Cookie Secure Flag": "Cookie Secure Flag",
@@ -120,6 +122,7 @@ if st.session_state["scan_results"]:
         {"key": "SSLv3 Detection", "func": render_sslv3_card},
         {"key": "TLS 1.0 Detection", "func": render_tlsv10_card},
         {"key": "TLS 1.1 Detection", "func": render_tlsv11_card},
+        {"key": "Response Code Check", "func": render_response_code_card},
         {"key": "HSTS Security Check", "func": render_hsts_card},
         {"key": "Security Headers Check", "func": render_header_card},
         {"key": "Cookie Secure Flag", "func": render_cookie_card},

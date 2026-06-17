@@ -42,11 +42,20 @@ def run_hsts_scan(targets):
         candidates = build_target_candidates(url)
         headers = {'User-Agent': USER_AGENT}
         last_error = None
+        last_not_found = None
 
         for target in candidates:
             try:
                 # allow_redirects=True PENTING: Header HSTS harus ada di final destination
                 r = requests.get(target, headers=headers, timeout=TIMEOUT, verify=False, allow_redirects=True)
+
+                if r.status_code == 404:
+                    last_not_found = f"{target} | NOT_FOUND | 404 | Not Found"
+                    continue
+
+                if r.status_code not in (200, 302):
+                    reason = r.reason or "Unexpected Response"
+                    return False, f"{target} | HTTP_STATUS | {r.status_code} | {reason}"
 
                 # Cek Header HSTS (Case Insensitive sudah dihandle requests.headers)
                 hsts = r.headers.get('Strict-Transport-Security')
@@ -74,6 +83,9 @@ def run_hsts_scan(targets):
             except Exception as e:
                 last_error = f"{target} | ERROR | {str(e)}"
                 continue
+
+        if last_not_found:
+            return False, last_not_found
 
         return False, last_error if last_error else f"{url.strip()} | ERROR | Unknown Error"
 

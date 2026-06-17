@@ -15,6 +15,7 @@ from script.phpVersion import run_php_scan
 from script.cookieSecure import run_cookie_scan
 from script.cookieHttpOnly import run_cookie_httponly_scan
 from script.sslHostnameMismatch import run_ssl_hostname_mismatch_scan
+from script.responseCode import run_response_code_scan
 
 def start_scanning_engine(targets_list, selected_scans, temp_file_path):
     """
@@ -57,6 +58,9 @@ def start_scanning_engine(targets_list, selected_scans, temp_file_path):
 
         if "Cookie HttpOnly Flag" in selected_scans:
             futures["Cookie HttpOnly Flag"] = executor.submit(run_cookie_httponly_scan, targets_list)
+
+        if "Response Code Check" in selected_scans:
+            futures["Response Code Check"] = executor.submit(run_response_code_scan, targets_list)
         
         if "Laravel Debug Mode" in selected_scans:
             futures["Laravel Debug Mode"] = executor.submit(run_laravel_scan, targets_list)

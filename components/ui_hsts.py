@@ -32,6 +32,18 @@ def render_hsts_card(hsts_data):
                     "Status": "ERROR",  # Status Khusus Error
                     "Details": parts[2].strip() # Ambil pesan errornya (Timeout/Refused)
                 })
+            elif len(parts) >= 4 and parts[1].strip() == "HTTP_STATUS":
+                combined_data.append({
+                    "URL": domain,
+                    "Status": f"HTTP {parts[2].strip()}",
+                    "Details": parts[3].strip()
+                })
+            elif len(parts) >= 3 and parts[1].strip() == "NOT_FOUND":
+                combined_data.append({
+                    "URL": domain,
+                    "Status": "NOT FOUND",
+                    "Details": f"HTTP {parts[2].strip()} {parts[3].strip()}"
+                })
             else:
                 # Format Scanner: "URL | HSTS Not Enabled"
                 combined_data.append({
@@ -51,6 +63,8 @@ def render_hsts_card(hsts_data):
             secure_count = df[df['Status'] == 'SECURE'].shape[0]
             insecure_count = df[df['Status'] == 'INSECURE'].shape[0]
             error_count = df[df['Status'] == 'ERROR'].shape[0]
+            not_found_count = df[df['Status'] == 'NOT FOUND'].shape[0]
+            http_status_count = df[df['Status'].astype(str).str.startswith('HTTP ')].shape[0]
 
             # Tampilkan Summary
             if 'Status' in df.columns:
@@ -65,6 +79,10 @@ def render_hsts_card(hsts_data):
                     st.error(f"⚠️{vuln_count} Domain(s) not Activate HSTS!")
                 else:
                     st.success("✅ All Domain are Safe (HSTS Enabled)")
+                if not_found_count > 0:
+                    st.info(f"{not_found_count} target(s) returned HTTP 404 Not Found and were excluded from insecure count.")
+                if http_status_count > 0:
+                    st.info(f"{http_status_count} target(s) returned non-200/302 HTTP status and were excluded from insecure count.")
                 
     else:
         st.info("Belum ada data HSTS.")
