@@ -1,0 +1,15 @@
+export const MODULE_NAMES = [
+    'SSL Certificate Check',
+    'SSL Certificate Hostname Mismatch',
+    'SSLv3 Detection',
+    'TLS 1.0 Detection',
+    'TLS 1.1 Detection',
+    'Response Code Check',
+    'HSTS Security Check',
+    'Security Headers Check',
+    'Cookie Secure Flag',
+    'Cookie HttpOnly Flag',
+    'Laravel Debug Mode',
+    'Node.js Debug Mode',
+    'PHP Version Disclosure',
+];

@@ -10,24 +10,21 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements
-COPY requirements.txt .
+# Copy backend requirements
+COPY backend/requirements.txt ./requirements.txt
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application files
-COPY app.py .
-COPY components/ ./components/
-COPY script/ ./script/
-COPY utils/ ./utils/
-COPY static/ ./static/
+COPY backend/ ./backend/
+COPY docs/ ./docs/
 
-# Expose Streamlit port
-EXPOSE 8501
+# Expose FastAPI port
+EXPOSE 8000
 
 # Health check
-HEALTHCHECK CMD curl --fail http://localhost:8501/_stcore/health || exit 1
+HEALTHCHECK CMD curl --fail http://localhost:8000/api/health || exit 1
 
-# Run Streamlit app
-CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+# Run FastAPI app
+CMD ["uvicorn", "backend.app_fastapi:app", "--host", "0.0.0.0", "--port", "8000"]

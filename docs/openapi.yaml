@@ -1,0 +1,487 @@
+openapi: 3.1.0
+info:
+  title: SecVal Scan API
+  version: 0.1.0
+  summary: API contract for SecVal MVC + Service migration
+  description: |
+    Contract-first API for scan orchestration, status tracking, summary, and XLSX report export.
+    This spec is intended to unblock frontend development before backend implementation is finalized.
+servers:
+  - url: http://localhost:8000
+    description: Local development
+
+tags:
+  - name: health
+  - name: scans
+  - name: reports
+
+paths:
+  /api/health:
+    get:
+      tags: [health]
+      summary: Health check
+      operationId: getHealth
+      responses:
+        '200':
+          description: Service and dependency health
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              examples:
+                ok:
+                  value:
+                    status: ok
+                    service: secval-api
+                    version: 0.1.0
+                    time: '2026-06-26T12:00:00Z'
+                    dependencies:
+                      scanner_engine: up
+                      nmap: up
+
+  /api/scans:
+    post:
+      tags: [scans]
+      summary: Create a new scan job
+      operationId: createScan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScanCreateRequest'
+            examples:
+              sample:
+                value:
+                  targets:
+                    - example.com
+                    - https://target.tld
+                  modules:
+                    - SSL Certificate Check
+                    - SSL Certificate Hostname Mismatch
+                    - HSTS Security Check
+                    - Security Headers Check
+                  options:
+                    timeoutSeconds: 30
+                    parallelism: 6
+      responses:
+        '202':
+          description: Scan accepted and queued/running
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScanAcceptedResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/scans/{scanId}:
+    get:
+      tags: [scans]
+      summary: Get scan status and results
+      operationId: getScanById
+      parameters:
+        - $ref: '#/components/parameters/ScanId'
+      responses:
+        '200':
+          description: Scan detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScanStatusResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/scans/{scanId}/summary:
+    get:
+      tags: [scans]
+      summary: Get per-module summary counters
+      operationId: getScanSummary
+      parameters:
+        - $ref: '#/components/parameters/ScanId'
+      responses:
+        '200':
+          description: Summary by module and overall status counts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScanSummaryResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/scans/{scanId}/report.xlsx:
+    get:
+      tags: [reports]
+      summary: Download XLSX report for a completed scan
+      operationId: downloadScanReport
+      parameters:
+        - $ref: '#/components/parameters/ScanId'
+      responses:
+        '200':
+          description: XLSX binary stream
+          headers:
+            Content-Disposition:
+              description: Attachment filename
+              schema:
+                type: string
+                example: attachment; filename="VA_Scan_Report_d6f0e4f4.xlsx"
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+        '409':
+          description: Scan not completed yet
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                notReady:
+                  value:
+                    error:
+                      code: SCAN_NOT_READY
+                      message: Report is available only when status is done
+                      traceId: 472f9ddc7d
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  parameters:
+    ScanId:
+      name: scanId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    BadRequest:
+      description: Request cannot be processed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            badRequest:
+              value:
+                error:
+                  code: BAD_REQUEST
+                  message: modules must not be empty
+                  traceId: c8aaf4b98f
+    ValidationError:
+      description: Invalid request payload
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationErrorResponse'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            notFound:
+              value:
+                error:
+                  code: SCAN_NOT_FOUND
+                  message: scanId not found
+                  traceId: b4ee3eac4a
+
+  schemas:
+    HealthResponse:
+      type: object
+      required: [status, service, version, time, dependencies]
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded, down]
+        service:
+          type: string
+        version:
+          type: string
+        time:
+          type: string
+          format: date-time
+        dependencies:
+          type: object
+          additionalProperties:
+            type: string
+            enum: [up, down, degraded]
+
+    ScanCreateRequest:
+      type: object
+      required: [targets, modules]
+      properties:
+        targets:
+          type: array
+          minItems: 1
+          items:
+            type: string
+            minLength: 1
+          description: Domain/IP/URL list to scan
+        modules:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/ModuleName'
+        options:
+          $ref: '#/components/schemas/ScanOptions'
+
+    ScanOptions:
+      type: object
+      additionalProperties: false
+      properties:
+        timeoutSeconds:
+          type: integer
+          minimum: 5
+          maximum: 300
+          default: 30
+        parallelism:
+          type: integer
+          minimum: 1
+          maximum: 32
+          default: 6
+
+    ScanAcceptedResponse:
+      type: object
+      required: [scanId, status, createdAt]
+      properties:
+        scanId:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/ScanStatus'
+        createdAt:
+          type: string
+          format: date-time
+        message:
+          type: string
+          example: Scan accepted
+
+    ScanStatusResponse:
+      type: object
+      required:
+        - scanId
+        - status
+        - createdAt
+        - updatedAt
+        - modules
+        - targets
+        - progress
+      properties:
+        scanId:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/ScanStatus'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        startedAt:
+          type: string
+          format: date-time
+          nullable: true
+        finishedAt:
+          type: string
+          format: date-time
+          nullable: true
+        targets:
+          type: array
+          items:
+            type: string
+        modules:
+          type: array
+          items:
+            $ref: '#/components/schemas/ModuleName'
+        progress:
+          $ref: '#/components/schemas/Progress'
+        results:
+          type: object
+          nullable: true
+          description: |
+            Normalized results grouped by module. Null while pending/running if partial output is disabled.
+          additionalProperties:
+            type: array
+            items:
+              $ref: '#/components/schemas/ModuleResult'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ModuleError'
+
+    Progress:
+      type: object
+      required: [completedModules, totalModules, percent]
+      properties:
+        completedModules:
+          type: integer
+          minimum: 0
+        totalModules:
+          type: integer
+          minimum: 1
+        percent:
+          type: number
+          minimum: 0
+          maximum: 100
+
+    ScanSummaryResponse:
+      type: object
+      required: [scanId, byModule, totals]
+      properties:
+        scanId:
+          type: string
+          format: uuid
+        byModule:
+          type: array
+          items:
+            $ref: '#/components/schemas/ModuleSummary'
+        totals:
+          $ref: '#/components/schemas/SummaryTotals'
+
+    ModuleSummary:
+      type: object
+      required: [module, count]
+      properties:
+        module:
+          $ref: '#/components/schemas/ModuleName'
+        count:
+          type: integer
+          minimum: 0
+        secure:
+          type: integer
+          minimum: 0
+        warning:
+          type: integer
+          minimum: 0
+        insecure:
+          type: integer
+          minimum: 0
+        error:
+          type: integer
+          minimum: 0
+
+    SummaryTotals:
+      type: object
+      required: [items, secure, warning, insecure, error]
+      properties:
+        items:
+          type: integer
+          minimum: 0
+        secure:
+          type: integer
+          minimum: 0
+        warning:
+          type: integer
+          minimum: 0
+        insecure:
+          type: integer
+          minimum: 0
+        error:
+          type: integer
+          minimum: 0
+
+    ModuleResult:
+      type: object
+      required: [module, target, status, details]
+      properties:
+        module:
+          $ref: '#/components/schemas/ModuleName'
+        target:
+          type: string
+          description: Domain/IP/URL that was scanned
+        status:
+          $ref: '#/components/schemas/ResultStatus'
+        severity:
+          $ref: '#/components/schemas/Severity'
+        details:
+          type: string
+        code:
+          type: string
+          nullable: true
+          description: Optional machine code, e.g. HTTP_404, DNS_ERROR
+        raw:
+          type: object
+          nullable: true
+          additionalProperties: true
+          description: Original module-specific payload for traceability
+
+    ModuleError:
+      type: object
+      required: [module, message]
+      properties:
+        module:
+          $ref: '#/components/schemas/ModuleName'
+        message:
+          type: string
+        target:
+          type: string
+          nullable: true
+
+    ScanStatus:
+      type: string
+      enum: [pending, running, done, failed, partial]
+
+    ResultStatus:
+      type: string
+      enum: [secure, warning, insecure, error, info]
+
+    Severity:
+      type: string
+      enum: [info, low, medium, high, critical]
+      nullable: true
+
+    ModuleName:
+      type: string
+      enum:
+        - SSL Certificate Check
+        - SSL Certificate Hostname Mismatch
+        - SSLv3 Detection
+        - TLS 1.0 Detection
+        - TLS 1.1 Detection
+        - Response Code Check
+        - HSTS Security Check
+        - Security Headers Check
+        - Cookie Secure Flag
+        - Cookie HttpOnly Flag
+        - Laravel Debug Mode
+        - Node.js Debug Mode
+        - PHP Version Disclosure
+
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, traceId]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            traceId:
+              type: string
+
+    ValidationErrorResponse:
+      allOf:
+        - $ref: '#/components/schemas/ErrorResponse'
+        - type: object
+          properties:
+            details:
+              type: array
+              items:
+                type: object
+                required: [field, message]
+                properties:
+                  field:
+                    type: string
+                  message:
+                    type: string

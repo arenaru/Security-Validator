@@ -1,9 +1,0 @@
-streamlit
-pandas
-requests
-pytz
-urllib3
-fpdf
-cvss
-bs4
-openpyxl
