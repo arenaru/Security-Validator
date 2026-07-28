@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from typing import Any
+from urllib.parse import urlparse
 
 from backend.models.scan_models import (
     MODULE_NAMES,
@@ -110,6 +111,12 @@ class ScanSummaryResponse:
     def from_job(cls, job: ScanJob) -> "ScanSummaryResponse":
         by_module: list[ModuleSummary] = []
         totals = {"items": 0, "secure": 0, "warning": 0, "insecure": 0, "error": 0}
+        domain_status: dict[str, ResultStatus] = {}
+
+        for target in job.targets:
+            domain = normalize_target_domain(target)
+            if domain:
+                domain_status.setdefault(domain, ResultStatus.INFO)
 
         for module_name in job.modules:
             items = job.results.get(module_name, [])
@@ -125,12 +132,24 @@ class ScanSummaryResponse:
                 elif item.status == ResultStatus.ERROR:
                     summary.error += 1
 
-            totals["items"] += summary.count
-            totals["secure"] += summary.secure
-            totals["warning"] += summary.warning
-            totals["insecure"] += summary.insecure
-            totals["error"] += summary.error
+                domain = normalize_target_domain(item.target)
+                if domain:
+                    current_status = domain_status.get(domain, ResultStatus.INFO)
+                    domain_status[domain] = merge_domain_status(current_status, item.status)
+
             by_module.append(summary)
+
+        for status in domain_status.values():
+            effective_status = ResultStatus.ERROR if status == ResultStatus.INFO else status
+            totals["items"] += 1
+            if effective_status == ResultStatus.SECURE:
+                totals["secure"] += 1
+            elif effective_status == ResultStatus.WARNING:
+                totals["warning"] += 1
+            elif effective_status == ResultStatus.INSECURE:
+                totals["insecure"] += 1
+            elif effective_status == ResultStatus.ERROR:
+                totals["error"] += 1
 
         return cls(
             scan_id=job.scan_id,
@@ -156,6 +175,33 @@ class ErrorPayload:
 class ErrorResponse:
     error: ErrorPayload
     details: list[ErrorDetail] | None = None
+
+
+def normalize_target_domain(target: str) -> str:
+    target = str(target or "").strip()
+    if not target:
+        return ""
+
+    if target.startswith(("http://", "https://")):
+        parsed = urlparse(target)
+        target = parsed.netloc or parsed.path
+
+    target = target.split("/")[0]
+    if ":" in target:
+        target = target.split(":")[0]
+
+    return target.strip().lower()
+
+
+def merge_domain_status(current: ResultStatus, next_status: ResultStatus) -> ResultStatus:
+    priority = {
+        ResultStatus.ERROR: 4,
+        ResultStatus.INSECURE: 3,
+        ResultStatus.WARNING: 2,
+        ResultStatus.SECURE: 1,
+        ResultStatus.INFO: 0,
+    }
+    return next_status if priority[next_status] > priority.get(current, 0) else current
 
 
 def to_dict(payload: Any) -> dict[str, Any]:

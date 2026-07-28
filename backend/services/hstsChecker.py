@@ -53,25 +53,22 @@ def run_hsts_scan(targets):
                     last_not_found = f"{target} | NOT_FOUND | 404 | Not Found"
                     continue
 
+                # Cek Header HSTS (Case Insensitive sudah di-handle requests.headers)
+                hsts = r.headers.get('Strict-Transport-Security')
+                if hsts:
+                    # Cek Robustness: max-age=0 artinya HSTS sengaja dimatikan
+                    if "max-age=0" in hsts.lower():
+                        return False, f"{target} | HTTP Strict Transport Security (HSTS) Policy Not Enabled"
+
+                    # Jika header HSTS ada, anggap valid terlepas dari status code
+                    return True, f"{target} | {hsts}"
+
                 if r.status_code not in (200, 302):
                     reason = r.reason or "Unexpected Response"
                     return False, f"{target} | HTTP_STATUS | {r.status_code} | {reason}"
 
-                # Cek Header HSTS (Case Insensitive sudah dihandle requests.headers)
-                hsts = r.headers.get('Strict-Transport-Security')
-
-                if hsts:
-                    # Cek Robustness: max-age=0 artinya HSTS sengaja dimatikan
-                    if "max-age=0" in hsts.lower():
-                        # [VULN] HSTS Disabled via max-age=0
-                        # Format output string: URL | Nama Vuln
-                        return False, f"{target} | HTTP Strict Transport Security (HSTS) Policy Not Enabled"
-
-                    # [SECURE] HSTS Valid
-                    return True, f"{target} | {hsts}"
-                else:
-                    # [VULN] HSTS Hilang sama sekali
-                    return False, f"{target} | HTTP Strict Transport Security (HSTS) Policy Not Enabled"
+                # [VULN] HSTS hilang sama sekali
+                return False, f"{target} | HTTP Strict Transport Security (HSTS) Policy Not Enabled"
 
             # --- ERROR HANDLING ---
             except requests.exceptions.Timeout:

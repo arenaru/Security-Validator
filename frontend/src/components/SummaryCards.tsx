@@ -8,30 +8,28 @@ interface SummaryCardsProps {
 export function SummaryCards({ totals }: SummaryCardsProps) {
   const cards = [
     {
-      label: 'Secure',
-      value: totals.secure,
-      icon: CheckCircle,
-      color: 'text-green-400',
-      bg: 'bg-green-900/10',
-    },
-    {
-      label: 'Warnings',
-      value: totals.warning,
-      icon: AlertCircle,
-      color: 'text-yellow-400',
-      bg: 'bg-yellow-900/10',
-    },
-    {
-      label: 'Vulnerable',
-      value: totals.insecure,
-      icon: XCircle,
-      color: 'text-red-400',
-      bg: 'bg-red-900/10',
-    },
-    {
-      label: 'Errors',
-      value: totals.error,
-      icon: HelpCircle,
+        label: 'Secure domains',
+        value: totals.secure,
+        icon: CheckCircle,
+        color: 'text-green-400',
+        bg: 'bg-green-900/10',
+      },
+      {
+        label: 'Warning domains',
+        value: totals.warning,
+        icon: AlertCircle,
+        color: 'text-yellow-400',
+        bg: 'bg-yellow-900/10',
+      },
+      {
+        label: 'Vulnerable domains',
+        value: totals.insecure,
+        icon: XCircle,
+        color: 'text-red-400',
+        bg: 'bg-red-900/10',
+      },
+      {
+        label: 'Error domains',
       color: 'text-slate-400',
       bg: 'bg-slate-800/20',
     },
@@ -53,7 +51,7 @@ export function SummaryCards({ totals }: SummaryCardsProps) {
       <div className="col-span-1 md:col-span-2 lg:col-span-4">
         <div className="card p-4 bg-slate-800/50">
           <p className="text-center text-slate-400 text-sm">
-            Total items scanned: <span className="font-semibold text-slate-100">{totals.items}</span>
+            Total domains scanned: <span className="font-semibold text-slate-100">{totals.items}</span>
           </p>
         </div>
       </div>
