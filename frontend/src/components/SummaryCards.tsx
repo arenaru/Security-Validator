@@ -8,28 +8,30 @@ interface SummaryCardsProps {
 export function SummaryCards({ totals }: SummaryCardsProps) {
   const cards = [
     {
-        label: 'Secure domains',
-        value: totals.secure,
-        icon: CheckCircle,
-        color: 'text-green-400',
-        bg: 'bg-green-900/10',
-      },
-      {
-        label: 'Warning domains',
-        value: totals.warning,
-        icon: AlertCircle,
-        color: 'text-yellow-400',
-        bg: 'bg-yellow-900/10',
-      },
-      {
-        label: 'Vulnerable domains',
-        value: totals.insecure,
-        icon: XCircle,
-        color: 'text-red-400',
-        bg: 'bg-red-900/10',
-      },
-      {
-        label: 'Error domains',
+      label: 'Secure domains',
+      value: totals.secure,
+      icon: CheckCircle,
+      color: 'text-green-400',
+      bg: 'bg-green-900/10',
+    },
+    {
+      label: 'Warning domains',
+      value: totals.warning,
+      icon: AlertCircle,
+      color: 'text-yellow-400',
+      bg: 'bg-yellow-900/10',
+    },
+    {
+      label: 'Vulnerable domains',
+      value: totals.insecure,
+      icon: XCircle,
+      color: 'text-red-400',
+      bg: 'bg-red-900/10',
+    },
+    {
+      label: 'Error domains',
+      value: totals.error,
+      icon: HelpCircle,
       color: 'text-slate-400',
       bg: 'bg-slate-800/20',
     },

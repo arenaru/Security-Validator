@@ -36,6 +36,12 @@ function App() {
     return () => clearInterval(interval)
   }, [scanId])
 
+  const handleResetScan = () => {
+    setScanId(null)
+    setScanStatus(null)
+    setSummary(null)
+  }
+
   const handleStartScan = async (targets: string[], modules: string[]) => {
     try {
       setIsLoading(true)
@@ -104,6 +110,18 @@ function App() {
           </div>
         ) : scanStatus ? (
           <div className="space-y-6">
+            {/* Start New Scan - show at top after scan completes */}
+            {scanStatus.status !== 'pending' && (
+              <div className="flex justify-end">
+                <button
+                  onClick={handleResetScan}
+                  className="btn-secondary"
+                >
+                  Start New Scan
+                </button>
+              </div>
+            )}
+
             {/* Progress */}
             <ProgressBar
               progress={scanStatus.progress}
@@ -140,21 +158,6 @@ function App() {
               </div>
             )}
 
-            {/* Report Download */}
-            {scanStatus.status !== 'pending' && (
-              <div>
-                <button
-                  onClick={() => {
-                    setScanId(null)
-                    setScanStatus(null)
-                    setSummary(null)
-                  }}
-                  className="btn-secondary w-full"
-                >
-                  Start New Scan
-                </button>
-              </div>
-            )}
           </div>
         ) : null}
       </main>
