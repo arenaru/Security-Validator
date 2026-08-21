@@ -11,6 +11,21 @@ services:
       - ./backend:/app/backend
       - ./docs:/app/docs
 
+  telegram-bot:
+    build:
+      context: .
+      dockerfile: bot/Dockerfile
+    container_name: secval-telegram-bot
+    restart: unless-stopped
+    environment:
+      - TZ=Asia/Jakarta
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:?Set TELEGRAM_BOT_TOKEN in .env}
+      - TELEGRAM_ALLOWED_USER_IDS=${TELEGRAM_ALLOWED_USER_IDS:?Set TELEGRAM_ALLOWED_USER_IDS in .env}
+      - API_BASE_URL=http://secval:8000/api
+    depends_on:
+      secval:
+        condition: service_healthy
+
   frontend:
     image: node:20-alpine
     container_name: secval-frontend

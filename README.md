@@ -45,6 +45,26 @@ Akses:
 2. Backend API: http://localhost:8000
 3. API Docs: http://localhost:8000/api/docs
 
+### Telegram Bot
+
+Bot Telegram berjalan sebagai service Docker terpisah. Salin `.env.example` menjadi `.env`, isi token baru dari `@BotFather` dan Telegram user ID yang diizinkan, lalu jalankan:
+
+```bash
+docker compose up --build
+```
+
+Perintah bot yang tersedia:
+
+```text
+/scan       menampilkan menu pilihan scan
+/fullscan   full scan (target dapat ditulis setelah command)
+/ssl        pemeriksaan SSL/TLS
+/headers    pemeriksaan security headers
+/cookies    pemeriksaan cookie security
+```
+
+Kirim target satu per baris, maksimal 100 target per batch. Sampai 3 target akan diringkas langsung di chat; batch yang lebih besar menerima ringkasan dan file laporan `.xlsx`.
+
 ### Opsi 2: Jalankan Lokal (Dev)
 
 Terminal 1 - Backend:
