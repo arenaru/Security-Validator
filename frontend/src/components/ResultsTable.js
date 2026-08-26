@@ -29,7 +29,8 @@ function getPayload(item) {
     return normalizeCell(getRaw(item, 'payload', 'Payload'));
 }
 function getStatusLabel(item) {
-    return normalizeCell(getRaw(item, 'Status', 'status') ?? item.status.toUpperCase());
+    const status = normalizeCell(getRaw(item, 'Status', 'status') ?? item.status.toUpperCase());
+    return status.toLowerCase() === 'safe' ? 'secure' : status;
 }
 const STATUS_PRIORITY = {
     ERROR: 5,
@@ -181,33 +182,27 @@ export function ResultsTable({ results }) {
     const [sortByModule, setSortByModule] = useState({});
     const statusColors = {
         secure: 'text-green-400 bg-green-900/20',
+        valid: 'text-green-400 bg-green-900/20',
         warning: 'text-yellow-400 bg-yellow-900/20',
         insecure: 'text-red-400 bg-red-900/20',
         error: 'text-slate-400 bg-slate-800/20',
         info: 'text-blue-400 bg-blue-900/20',
+        disclosure: 'text-blue-400 bg-blue-900/20',
     };
-    const getModuleSummary = (items) => {
+    const getModuleSummary = (moduleName, items) => {
         return items.reduce((summary, item) => {
-            if (item.status === 'secure') {
-                summary.secure += 1;
+            if (moduleName === 'Response Code Check') {
+                const statusCode = normalizeCell(getRaw(item, 'Status Code'));
+                summary[statusCode] = (summary[statusCode] ?? 0) + 1;
+                return summary;
             }
-            else if (item.status === 'info') {
-                summary.secure += 1;
-            }
-            else if (item.status === 'warning') {
-                summary.warning += 1;
-            }
-            else if (item.status === 'insecure') {
-                summary.insecure += 1;
-            }
-            else if (item.status === 'error') {
-                summary.error += 1;
-            }
+            const status = getStatusLabel(item).toLowerCase();
+            summary[status] = (summary[status] ?? 0) + 1;
             return summary;
-        }, { secure: 0, warning: 0, insecure: 0, error: 0 });
+        }, {});
     };
     return (_jsx("div", { className: "card overflow-hidden", children: Object.entries(results).map(([moduleName, items]) => {
-            const summary = getModuleSummary(items);
+            const summary = getModuleSummary(moduleName, items);
             const columns = getColumnsForModule(moduleName, statusColors);
             const sortState = sortByModule[moduleName];
             const sortedRows = (() => {
@@ -236,6 +231,6 @@ export function ResultsTable({ results }) {
                     return { ...prev, [moduleName]: { key: col.key, direction: nextDirection } };
                 });
             };
-            return (_jsxs("div", { className: "border-b border-slate-800 last:border-b-0", children: [_jsxs("button", { onClick: () => setExpandedModule(expandedModule === moduleName ? null : moduleName), className: "w-full flex items-center justify-between p-4 hover:bg-slate-800/50 transition-colors", children: [_jsxs("div", { className: "flex-1 text-left", children: [_jsx("h3", { className: "font-semibold text-slate-100", children: moduleName }), _jsxs("div", { className: "mt-1 flex flex-wrap items-center gap-2 text-sm text-slate-400", children: [_jsxs("span", { children: [items.length, " results"] }), summary.secure > 0 && (_jsxs("span", { className: "rounded-full bg-green-900/20 px-2 py-0.5 text-xs font-semibold text-green-400", children: [summary.secure, " secure"] })), summary.warning > 0 && (_jsxs("span", { className: "rounded-full bg-yellow-900/20 px-2 py-0.5 text-xs font-semibold text-yellow-400", children: [summary.warning, " warning"] })), summary.insecure > 0 && (_jsxs("span", { className: "rounded-full bg-red-900/20 px-2 py-0.5 text-xs font-semibold text-red-400", children: [summary.insecure, " vulnerable"] })), summary.error > 0 && (_jsxs("span", { className: "rounded-full bg-slate-800 px-2 py-0.5 text-xs font-semibold text-slate-300", children: [summary.error, " error"] }))] })] }), expandedModule === moduleName ? (_jsx(ChevronUp, { size: 20, className: "text-slate-500" })) : (_jsx(ChevronDown, { size: 20, className: "text-slate-500" }))] }), expandedModule === moduleName && (_jsx("div", { className: "bg-slate-800/30 p-4 border-t border-slate-800", children: _jsx("div", { className: "overflow-x-auto rounded-lg border border-slate-800", children: _jsxs("table", { className: "w-full text-sm", children: [_jsx("thead", { className: "bg-slate-900/80", children: _jsx("tr", { className: "text-left text-slate-300", children: columns.map((col, idx) => (_jsx("th", { className: `px-3 py-3 ${col.className || ''}`, children: col.sortable ? (_jsxs("button", { type: "button", onClick: () => toggleSort(col), className: "inline-flex items-center gap-1 hover:text-slate-100 transition-colors", children: [_jsx("span", { children: col.header }), sortState?.key === col.key ? (sortState.direction === 'asc' ? (_jsx(ChevronUp, { size: 14, className: "text-slate-400" })) : (_jsx(ChevronDown, { size: 14, className: "text-slate-400" }))) : (_jsx(ChevronDown, { size: 14, className: "text-slate-600" }))] })) : (col.header) }, `${moduleName}-head-${idx}`))) }) }), _jsx("tbody", { children: sortedRows.map((row, index) => (_jsx("tr", { className: "border-t border-slate-800 align-top", children: columns.map((col, colIdx) => (_jsx("td", { className: `px-3 py-3 ${col.className || ''}`, children: col.render(row.item, row.originalIndex) }, `${moduleName}-row-${index}-col-${colIdx}`))) }, row.originalIndex))) })] }) }) }))] }, moduleName));
+            return (_jsxs("div", { className: "border-b border-slate-800 last:border-b-0", children: [_jsxs("button", { onClick: () => setExpandedModule(expandedModule === moduleName ? null : moduleName), className: "w-full flex items-center justify-between p-4 hover:bg-slate-800/50 transition-colors", children: [_jsxs("div", { className: "flex-1 text-left", children: [_jsx("h3", { className: "font-semibold text-slate-100", children: moduleName }), _jsxs("div", { className: "mt-1 flex flex-wrap items-center gap-2 text-sm text-slate-400", children: [_jsxs("span", { children: [items.length, " results"] }), Object.entries(summary).map(([status, count]) => (_jsxs("span", { className: `rounded-full px-2 py-0.5 text-xs font-semibold ${statusColors[status] ?? 'text-slate-300 bg-slate-800/80'}`, children: [count, " ", status] }, status)))] })] }), expandedModule === moduleName ? (_jsx(ChevronUp, { size: 20, className: "text-slate-500" })) : (_jsx(ChevronDown, { size: 20, className: "text-slate-500" }))] }), expandedModule === moduleName && (_jsx("div", { className: "bg-slate-800/30 p-4 border-t border-slate-800", children: _jsx("div", { className: "overflow-x-auto rounded-lg border border-slate-800", children: _jsxs("table", { className: "w-full text-sm", children: [_jsx("thead", { className: "bg-slate-900/80", children: _jsx("tr", { className: "text-left text-slate-300", children: columns.map((col, idx) => (_jsx("th", { className: `px-3 py-3 ${col.className || ''}`, children: col.sortable ? (_jsxs("button", { type: "button", onClick: () => toggleSort(col), className: "inline-flex items-center gap-1 hover:text-slate-100 transition-colors", children: [_jsx("span", { children: col.header }), sortState?.key === col.key ? (sortState.direction === 'asc' ? (_jsx(ChevronUp, { size: 14, className: "text-slate-400" })) : (_jsx(ChevronDown, { size: 14, className: "text-slate-400" }))) : (_jsx(ChevronDown, { size: 14, className: "text-slate-600" }))] })) : (col.header) }, `${moduleName}-head-${idx}`))) }) }), _jsx("tbody", { children: sortedRows.map((row, index) => (_jsx("tr", { className: "border-t border-slate-800 align-top", children: columns.map((col, colIdx) => (_jsx("td", { className: `px-3 py-3 ${col.className || ''}`, children: col.render(row.item, row.originalIndex) }, `${moduleName}-row-${index}-col-${colIdx}`))) }, row.originalIndex))) })] }) }) }))] }, moduleName));
         }) }));
 }

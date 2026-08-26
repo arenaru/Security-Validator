@@ -37,7 +37,8 @@ function getPayload(item: ModuleResult): string {
 }
 
 function getStatusLabel(item: ModuleResult): string {
-  return normalizeCell(getRaw(item, 'Status', 'status') ?? item.status.toUpperCase())
+  const status = normalizeCell(getRaw(item, 'Status', 'status') ?? item.status.toUpperCase())
+  return status.toLowerCase() === 'safe' ? 'secure' : status
 }
 
 type ColumnDef = {
@@ -228,37 +229,36 @@ export function ResultsTable({ results }: ResultsTableProps) {
 
   const statusColors: Record<string, string> = {
     secure: 'text-green-400 bg-green-900/20',
+    valid: 'text-green-400 bg-green-900/20',
     warning: 'text-yellow-400 bg-yellow-900/20',
     insecure: 'text-red-400 bg-red-900/20',
     error: 'text-slate-400 bg-slate-800/20',
     info: 'text-blue-400 bg-blue-900/20',
+    disclosure: 'text-blue-400 bg-blue-900/20',
   }
 
-  const getModuleSummary = (items: ModuleResult[]) => {
+  const getModuleSummary = (moduleName: string, items: ModuleResult[]) => {
     return items.reduce(
       (summary, item) => {
-        if (item.status === 'secure') {
-          summary.secure += 1
-        } else if (item.status === 'info') {
-          summary.secure += 1
-        } else if (item.status === 'warning') {
-          summary.warning += 1
-        } else if (item.status === 'insecure') {
-          summary.insecure += 1
-        } else if (item.status === 'error') {
-          summary.error += 1
+        if (moduleName === 'Response Code Check') {
+          const statusCode = normalizeCell(getRaw(item, 'Status Code'))
+          summary[statusCode] = (summary[statusCode] ?? 0) + 1
+          return summary
         }
+
+        const status = getStatusLabel(item).toLowerCase()
+        summary[status] = (summary[status] ?? 0) + 1
 
         return summary
       },
-      { secure: 0, warning: 0, insecure: 0, error: 0 }
+      {} as Record<string, number>
     )
   }
 
   return (
     <div className="card overflow-hidden">
       {Object.entries(results).map(([moduleName, items]) => {
-        const summary = getModuleSummary(items)
+        const summary = getModuleSummary(moduleName, items)
         const columns = getColumnsForModule(moduleName, statusColors)
         const sortState = sortByModule[moduleName]
 
@@ -299,26 +299,14 @@ export function ResultsTable({ results }: ResultsTableProps) {
               <h3 className="font-semibold text-slate-100">{moduleName}</h3>
               <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-slate-400">
                 <span>{items.length} results</span>
-                {summary.secure > 0 && (
-                  <span className="rounded-full bg-green-900/20 px-2 py-0.5 text-xs font-semibold text-green-400">
-                    {summary.secure} secure
+                {Object.entries(summary).map(([status, count]) => (
+                  <span
+                    key={status}
+                    className={`rounded-full px-2 py-0.5 text-xs font-semibold ${statusColors[status] ?? 'text-slate-300 bg-slate-800/80'}`}
+                  >
+                    {count} {status}
                   </span>
-                )}
-                {summary.warning > 0 && (
-                  <span className="rounded-full bg-yellow-900/20 px-2 py-0.5 text-xs font-semibold text-yellow-400">
-                    {summary.warning} warning
-                  </span>
-                )}
-                {summary.insecure > 0 && (
-                  <span className="rounded-full bg-red-900/20 px-2 py-0.5 text-xs font-semibold text-red-400">
-                    {summary.insecure} vulnerable
-                  </span>
-                )}
-                {summary.error > 0 && (
-                  <span className="rounded-full bg-slate-800 px-2 py-0.5 text-xs font-semibold text-slate-300">
-                    {summary.error} error
-                  </span>
-                )}
+                ))}
               </div>
             </div>
             {expandedModule === moduleName ? (

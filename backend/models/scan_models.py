@@ -57,9 +57,9 @@ def normalize_result_status(raw_status: str | None) -> ResultStatus:
 
     if value in {"valid", "safe", "secure", "ok"}:
         return ResultStatus.SECURE
-    if value in {"warning", "warn", "expired", "critical", "vulnerable", "invalid_status", "not found"}:
+    if value in {"warning", "warn", "expired", "invalid_status", "not found"}:
         return ResultStatus.WARNING
-    if value in {"insecure"}:
+    if value in {"insecure", "vulnerable", "critical"}:
         return ResultStatus.INSECURE
     if value in {"error", "failed", "dns_error", "timeout"}:
         return ResultStatus.ERROR
