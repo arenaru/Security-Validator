@@ -63,7 +63,7 @@ def run_hsts_scan(targets):
                     # Jika header HSTS ada, anggap valid terlepas dari status code
                     return True, f"{target} | {hsts}"
 
-                if r.status_code not in (200, 302):
+                if r.status_code not in (200, 302, 400):
                     reason = r.reason or "Unexpected Response"
                     return False, f"{target} | HTTP_STATUS | {r.status_code} | {reason}"
 
