@@ -3,14 +3,12 @@ import { Shield } from 'lucide-react'
 import { scanApi } from './api/client'
 import { ScanForm } from './components/ScanForm'
 import { ProgressBar } from './components/ProgressBar'
-import { SummaryCards } from './components/SummaryCards'
 import { ResultsTable } from './components/ResultsTable'
-import type { ScanStatusResponse, ScanSummaryResponse } from './types'
+import type { ScanStatusResponse } from './types'
 
 function App() {
   const [scanId, setScanId] = useState<string | null>(null)
   const [scanStatus, setScanStatus] = useState<ScanStatusResponse | null>(null)
-  const [summary, setSummary] = useState<ScanSummaryResponse | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -25,8 +23,6 @@ function App() {
 
         if (status.status === 'done' || status.status === 'partial' || status.status === 'failed') {
           clearInterval(interval)
-          const summaryData = await scanApi.getScanSummary(scanId)
-          setSummary(summaryData)
         }
       } catch (err) {
         console.error('Error polling scan status:', err)
@@ -35,12 +31,6 @@ function App() {
 
     return () => clearInterval(interval)
   }, [scanId])
-
-  const handleResetScan = () => {
-    setScanId(null)
-    setScanStatus(null)
-    setSummary(null)
-  }
 
   const handleStartScan = async (targets: string[], modules: string[]) => {
     try {
@@ -84,10 +74,10 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
       {/* Header */}
-      <header className="border-b border-slate-800 bg-slate-900/50 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 py-6 flex items-center gap-3">
+      <header className="h-20 border-b border-slate-800 bg-slate-900/50 backdrop-blur-sm sticky top-0 z-50">
+        <div className="h-full px-4 flex items-center gap-3">
           <Shield className="text-blue-500" size={32} />
           <div>
             <h1 className="text-2xl font-bold text-slate-100">SecVal</h1>
@@ -97,73 +87,51 @@ function App() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 py-8">
+      <main className="flex-1 max-w-[96rem] mx-auto px-4 py-8 w-full">
         {error && (
           <div className="mb-6 p-4 bg-red-900/20 border border-red-800 rounded-lg text-red-400">
             {error}
           </div>
         )}
 
-        {!scanId ? (
-          <div className="max-w-2xl">
-            <ScanForm onSubmit={handleStartScan} isLoading={isLoading} />
-          </div>
-        ) : scanStatus ? (
-          <div className="space-y-6">
-            {/* Start New Scan - show at top after scan completes */}
-            {scanStatus.status !== 'pending' && (
-              <div className="flex justify-end">
-                <button
-                  onClick={handleResetScan}
-                  className="btn-secondary"
-                >
-                  Start New Scan
-                </button>
-              </div>
-            )}
+        <ScanForm
+          onSubmit={handleStartScan}
+          isLoading={isLoading}
+          results={scanStatus && (
+            <div className="space-y-6">
+              {scanStatus.results && Object.keys(scanStatus.results).length > 0 && (
+                <div className="space-y-4">
+                  <h2 className="text-xl font-semibold text-slate-100">Results</h2>
+                  <ResultsTable results={scanStatus.results} />
+                </div>
+              )}
 
-            {/* Progress */}
+              {scanStatus.errors && scanStatus.errors.length > 0 && (
+                <div className="card p-6">
+                  <h2 className="text-lg font-semibold text-slate-100 mb-4">Errors</h2>
+                  <div className="space-y-2">
+                    {scanStatus.errors.map((err, idx) => (
+                      <div key={idx} className="text-sm text-slate-400 p-2 bg-red-900/10 rounded">
+                        <strong className="text-slate-300">{err.module}:</strong> {err.message}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        >
+          {scanStatus && (
             <ProgressBar
               progress={scanStatus.progress}
               status={scanStatus.status}
             />
-
-            {/* Summary Stats - Show when completed */}
-            {summary && (
-              <div className="space-y-4">
-                <h2 className="text-xl font-semibold text-slate-100">Summary</h2>
-                <SummaryCards totals={summary.totals} />
-              </div>
-            )}
-
-            {/* Results - Show when available */}
-            {scanStatus.results && Object.keys(scanStatus.results).length > 0 && (
-              <div className="space-y-4">
-                <h2 className="text-xl font-semibold text-slate-100">Detailed Results</h2>
-                <ResultsTable results={scanStatus.results} />
-              </div>
-            )}
-
-            {/* Errors - Show if any */}
-            {scanStatus.errors && scanStatus.errors.length > 0 && (
-              <div className="card p-6">
-                <h2 className="text-lg font-semibold text-slate-100 mb-4">Errors</h2>
-                <div className="space-y-2">
-                  {scanStatus.errors.map((err, idx) => (
-                    <div key={idx} className="text-sm text-slate-400 p-2 bg-red-900/10 rounded">
-                      <strong className="text-slate-300">{err.module}:</strong> {err.message}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-          </div>
-        ) : null}
+          )}
+        </ScanForm>
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-800 bg-slate-900/50 mt-12">
+      <footer className="border-t border-slate-800 bg-slate-900/50">
         <div className="max-w-7xl mx-auto px-4 py-6 text-center text-slate-500 text-sm">
           SecVal v0.1.0 • Vulnerability Scanner
         </div>

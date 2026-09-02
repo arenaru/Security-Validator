@@ -7,12 +7,12 @@ interface ProgressBarProps {
 }
 
 export function ProgressBar({ progress, status }: ProgressBarProps) {
-  const statusColors: Record<ScanStatus, string> = {
-    pending: 'bg-yellow-500',
-    running: 'bg-blue-500',
-    done: 'bg-green-500',
-    partial: 'bg-orange-500',
-    failed: 'bg-red-500',
+  const statusStyles: Record<ScanStatus, string> = {
+    pending: 'bg-yellow-400',
+    running: 'bg-blue-400',
+    done: 'bg-emerald-400',
+    partial: 'bg-orange-400',
+    failed: 'bg-red-400',
   }
 
   const statusLabels: Record<ScanStatus, string> = {
@@ -24,32 +24,20 @@ export function ProgressBar({ progress, status }: ProgressBarProps) {
   }
 
   return (
-    <div className="card p-6 space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          {status === 'running' && (
-            <Activity className="text-blue-400 animate-spin" size={20} />
-          )}
-          <h3 className="text-lg font-semibold">Scan Progress</h3>
+    <section className="border border-slate-800 bg-slate-900/60 px-4 py-3" aria-label="Scan progress">
+      <div className="mb-2 flex items-center justify-between gap-4 text-sm">
+        <div className="flex min-w-0 items-center gap-2 text-slate-400">
+          {status === 'running' && <Activity className="shrink-0 animate-spin text-blue-400" size={16} />}
+          <span className="truncate">{statusLabels[status]}: {progress.completedModules}/{progress.totalModules} modules</span>
         </div>
-        <span className={`px-3 py-1 rounded-full text-sm font-medium ${statusColors[status]} text-white`}>
-          {statusLabels[status]}
-        </span>
+        <span className="shrink-0 font-semibold text-slate-100">{Math.round(progress.percent)}%</span>
       </div>
-
-      {/* Progress Bar */}
-      <div className="space-y-2">
-        <div className="w-full bg-slate-800 rounded-full h-3 overflow-hidden">
-          <div
-            className={`h-full transition-all duration-500 ${statusColors[status]}`}
-            style={{ width: `${progress.percent}%` }}
-          />
-        </div>
-        <div className="flex justify-between text-sm text-slate-400">
-          <span>{progress.completedModules} of {progress.totalModules} modules</span>
-          <span className="font-semibold text-slate-100">{Math.round(progress.percent)}%</span>
-        </div>
+      <div className="h-2 overflow-hidden rounded-full bg-slate-800">
+        <div
+          className={`h-full transition-all duration-500 ${statusStyles[status]}`}
+          style={{ width: `${progress.percent}%` }}
+        />
       </div>
-    </div>
+    </section>
   )
 }

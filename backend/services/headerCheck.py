@@ -1,6 +1,5 @@
 import requests
 import urllib3
-import pandas as pd
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 from urllib.parse import urlparse

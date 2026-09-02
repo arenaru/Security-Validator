@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronUp } from 'lucide-react'
+import { Check, ChevronDown, ChevronUp, Copy } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
 import type { ModuleResult } from '../types'
@@ -224,8 +224,11 @@ function getColumnsForModule(moduleName: string, statusColors: Record<string, st
 }
 
 export function ResultsTable({ results }: ResultsTableProps) {
-  const [expandedModule, setExpandedModule] = useState<string | null>(null)
+  const [selectedModule, setSelectedModule] = useState<string | null>(null)
   const [sortByModule, setSortByModule] = useState<Record<string, SortState>>({})
+  const [selectedRowsByModule, setSelectedRowsByModule] = useState<Record<string, number[]>>({})
+  const [selectionAnchorByModule, setSelectionAnchorByModule] = useState<Record<string, number>>({})
+  const [copied, setCopied] = useState(false)
 
   const statusColors: Record<string, string> = {
     secure: 'text-green-400 bg-green-900/20',
@@ -255,117 +258,227 @@ export function ResultsTable({ results }: ResultsTableProps) {
     )
   }
 
+  const moduleEntries = Object.entries(results)
+  const activeModuleName = moduleEntries.some(([moduleName]) => moduleName === selectedModule)
+    ? selectedModule!
+    : moduleEntries[0]?.[0]
+  const activeItems = moduleEntries.find(([moduleName]) => moduleName === activeModuleName)?.[1] ?? []
+  const activeSummary = getModuleSummary(activeModuleName ?? '', activeItems)
+  const activeColumns = getColumnsForModule(activeModuleName ?? '', statusColors)
+  const activeSortState = sortByModule[activeModuleName ?? '']
+  const selectedRows = selectedRowsByModule[activeModuleName ?? ''] ?? []
+  const selectedRowSet = new Set(selectedRows)
+  const allRowsSelected = activeItems.length > 0 && selectedRows.length === activeItems.length
+  const sortedRows = (() => {
+    const rows = activeItems.map((item, originalIndex) => ({ item, originalIndex }))
+    if (!activeSortState) return rows
+
+    const column = activeColumns.find((item) => item.key === activeSortState.key)
+    if (!column?.sortable || !column.sortValue) return rows
+
+    return [...rows].sort((first, second) => {
+      const firstValue = column.sortValue!(first.item, first.originalIndex)
+      const secondValue = column.sortValue!(second.item, second.originalIndex)
+      return compareSortValues(firstValue, secondValue, activeSortState.direction)
+    })
+  })()
+
+  const toggleSort = (column: ColumnDef) => {
+    if (!column.sortable || !activeModuleName) return
+
+    setSortByModule((previous) => {
+      const current = previous[activeModuleName]
+      if (!current || current.key !== column.key) {
+        return { ...previous, [activeModuleName]: { key: column.key, direction: 'asc' } }
+      }
+
+      const nextDirection: SortDirection = current.direction === 'asc' ? 'desc' : 'asc'
+      return { ...previous, [activeModuleName]: { key: column.key, direction: nextDirection } }
+    })
+  }
+
+  const toggleRowSelection = (originalIndex: number, sortedIndex: number, selectRange: boolean) => {
+    if (!activeModuleName) return
+
+    setSelectedRowsByModule((previous) => {
+      const current = previous[activeModuleName] ?? []
+      const anchor = selectionAnchorByModule[activeModuleName]
+
+      if (selectRange && anchor !== undefined) {
+        const anchorSortedIndex = sortedRows.findIndex((row) => row.originalIndex === anchor)
+        const firstIndex = Math.min(anchorSortedIndex, sortedIndex)
+        const lastIndex = Math.max(anchorSortedIndex, sortedIndex)
+        const range = sortedRows.slice(firstIndex, lastIndex + 1).map((row) => row.originalIndex)
+        const next = current.includes(originalIndex)
+          ? current.filter((index) => !range.includes(index))
+          : [...new Set([...current, ...range])]
+        return { ...previous, [activeModuleName]: next }
+      }
+
+      const next = current.includes(originalIndex)
+        ? current.filter((index) => index !== originalIndex)
+        : [...current, originalIndex]
+      return { ...previous, [activeModuleName]: next }
+    })
+    setSelectionAnchorByModule((previous) => ({ ...previous, [activeModuleName]: originalIndex }))
+    setCopied(false)
+  }
+
+  const toggleAllRows = () => {
+    if (!activeModuleName) return
+
+    setSelectedRowsByModule((previous) => ({
+      ...previous,
+      [activeModuleName]: allRowsSelected ? [] : activeItems.map((_, index) => index),
+    }))
+    setSelectionAnchorByModule((previous) => ({ ...previous, [activeModuleName]: 0 }))
+    setCopied(false)
+  }
+
+  const copySelectedUrls = async () => {
+    const urls = selectedRows
+      .map((index) => getUrl(activeItems[index]))
+      .filter((url) => url !== '-')
+
+    if (!urls.length) return
+
+    await navigator.clipboard.writeText(urls.join('\n'))
+    setCopied(true)
+  }
+
   return (
-    <div className="card overflow-hidden">
-      {Object.entries(results).map(([moduleName, items]) => {
-        const summary = getModuleSummary(moduleName, items)
-        const columns = getColumnsForModule(moduleName, statusColors)
-        const sortState = sortByModule[moduleName]
-
-        const sortedRows = (() => {
-          const rows = items.map((item, originalIndex) => ({ item, originalIndex }))
-          if (!sortState) return rows
-          const col = columns.find((c) => c.key === sortState.key)
-          if (!col || !col.sortable || !col.sortValue) return rows
-
-          // Create a copy so we never mutate source results from API/state.
-          return [...rows].sort((a, b) => {
-            const aVal = col.sortValue!(a.item, a.originalIndex)
-            const bVal = col.sortValue!(b.item, b.originalIndex)
-            return compareSortValues(aVal, bVal, sortState.direction)
-          })
-        })()
-
-        const toggleSort = (col: ColumnDef) => {
-          if (!col.sortable) return
-          setSortByModule((prev) => {
-            const current = prev[moduleName]
-            if (!current || current.key !== col.key) {
-              return { ...prev, [moduleName]: { key: col.key, direction: 'asc' } }
-            }
-            const nextDirection: SortDirection = current.direction === 'asc' ? 'desc' : 'asc'
-            return { ...prev, [moduleName]: { key: col.key, direction: nextDirection } }
-          })
-        }
-
-        return (
-        <div key={moduleName} className="border-b border-slate-800 last:border-b-0">
-          {/* Module Header */}
-          <button
-            onClick={() => setExpandedModule(expandedModule === moduleName ? null : moduleName)}
-            className="w-full flex items-center justify-between p-4 hover:bg-slate-800/50 transition-colors"
-          >
-            <div className="flex-1 text-left">
-              <h3 className="font-semibold text-slate-100">{moduleName}</h3>
-              <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-slate-400">
-                <span>{items.length} results</span>
-                {Object.entries(summary).map(([status, count]) => (
-                  <span
-                    key={status}
-                    className={`rounded-full px-2 py-0.5 text-xs font-semibold ${statusColors[status] ?? 'text-slate-300 bg-slate-800/80'}`}
-                  >
-                    {count} {status}
-                  </span>
-                ))}
-              </div>
-            </div>
-            {expandedModule === moduleName ? (
-              <ChevronUp size={20} className="text-slate-500" />
-            ) : (
-              <ChevronDown size={20} className="text-slate-500" />
-            )}
-          </button>
-
-          {/* Module Results */}
-          {expandedModule === moduleName && (
-            <div className="bg-slate-800/30 p-4 border-t border-slate-800">
-              <div className="overflow-x-auto rounded-lg border border-slate-800">
-                <table className="w-full text-sm">
-                  <thead className="bg-slate-900/80">
-                    <tr className="text-left text-slate-300">
-                      {columns.map((col, idx) => (
-                        <th key={`${moduleName}-head-${idx}`} className={`px-3 py-3 ${col.className || ''}`}>
-                          {col.sortable ? (
-                            <button
-                              type="button"
-                              onClick={() => toggleSort(col)}
-                              className="inline-flex items-center gap-1 hover:text-slate-100 transition-colors"
-                            >
-                              <span>{col.header}</span>
-                              {sortState?.key === col.key ? (
-                                sortState.direction === 'asc' ? (
-                                  <ChevronUp size={14} className="text-slate-400" />
-                                ) : (
-                                  <ChevronDown size={14} className="text-slate-400" />
-                                )
-                              ) : (
-                                <ChevronDown size={14} className="text-slate-600" />
-                              )}
-                            </button>
-                          ) : (
-                            col.header
-                          )}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sortedRows.map((row, index) => (
-                      <tr key={row.originalIndex} className="border-t border-slate-800 align-top">
-                        {columns.map((col, colIdx) => (
-                          <td key={`${moduleName}-row-${index}-col-${colIdx}`} className={`px-3 py-3 ${col.className || ''}`}>
-                            {col.render(row.item, row.originalIndex)}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
+    <div className="grid gap-4 lg:grid-cols-[17rem_minmax(0,1fr)]">
+      <nav className="card h-fit overflow-hidden lg:sticky lg:top-24" aria-label="Scan result modules">
+        <div className="border-b border-slate-800 px-4 py-3">
+          <h3 className="font-semibold text-slate-100">Scan Modules</h3>
+          <p className="mt-1 text-sm text-slate-400">Select a module to inspect its findings.</p>
         </div>
-      )})}
+        <div className="max-h-[50vh] overflow-y-auto p-2 lg:max-h-[calc(100vh-8rem)]">
+          {moduleEntries.map(([moduleName, items]) => {
+            const summary = getModuleSummary(moduleName, items)
+            const isActive = moduleName === activeModuleName
+
+            return (
+              <button
+                key={moduleName}
+                type="button"
+                onClick={() => setSelectedModule(moduleName)}
+                className={`mb-1 w-full rounded-md p-3 text-left transition-colors last:mb-0 ${
+                  isActive ? 'bg-blue-600/20 ring-1 ring-inset ring-blue-500/60' : 'hover:bg-slate-800/70'
+                }`}
+              >
+                <span className="block text-sm font-medium text-slate-100">{moduleName}</span>
+                <span className="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-slate-400">
+                  <span>{items.length} results</span>
+                  {Object.entries(summary).map(([status, count]) => (
+                    <span
+                      key={status}
+                      className={`rounded-full px-1.5 py-0.5 font-semibold ${statusColors[status] ?? 'text-slate-300 bg-slate-800/80'}`}
+                    >
+                      {count} {status}
+                    </span>
+                  ))}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      </nav>
+
+      {activeModuleName && (
+        <section className="card min-w-0 overflow-hidden">
+          <div className="border-b border-slate-800 px-5 py-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h3 className="font-semibold text-slate-100">{activeModuleName}</h3>
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-slate-400">
+                  <span>{activeItems.length} results</span>
+                  {selectedRows.length > 0 && <span>{selectedRows.length} selected</span>}
+                  {Object.entries(activeSummary).map(([status, count]) => (
+                    <span
+                      key={status}
+                      className={`rounded-full px-2 py-0.5 text-xs font-semibold ${statusColors[status] ?? 'text-slate-300 bg-slate-800/80'}`}
+                    >
+                      {count} {status}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={copySelectedUrls}
+                disabled={selectedRows.length === 0}
+                className="btn-secondary inline-flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {copied ? <Check size={16} /> : <Copy size={16} />}
+                {copied ? 'Copied' : 'Copy selected URLs'}
+              </button>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-900/80">
+                <tr className="text-left text-slate-300">
+                  <th className="w-12 px-3 py-3">
+                    <input
+                      type="checkbox"
+                      checked={allRowsSelected}
+                      onChange={toggleAllRows}
+                      aria-label="Select all results"
+                      className="h-4 w-4 cursor-pointer accent-blue-500"
+                    />
+                  </th>
+                  {activeColumns.map((column, index) => (
+                    <th key={`${activeModuleName}-head-${index}`} className={`px-3 py-3 ${column.className || ''}`}>
+                      {column.sortable ? (
+                        <button
+                          type="button"
+                          onClick={() => toggleSort(column)}
+                          className="inline-flex items-center gap-1 hover:text-slate-100 transition-colors"
+                        >
+                          <span>{column.header}</span>
+                          {activeSortState?.key === column.key ? (
+                            activeSortState.direction === 'asc' ? (
+                              <ChevronUp size={14} className="text-slate-400" />
+                            ) : (
+                              <ChevronDown size={14} className="text-slate-400" />
+                            )
+                          ) : (
+                            <ChevronDown size={14} className="text-slate-600" />
+                          )}
+                        </button>
+                      ) : (
+                        column.header
+                      )}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {sortedRows.map((row, index) => (
+                  <tr key={row.originalIndex} className="border-t border-slate-800 align-top">
+                    <td className="px-3 py-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedRowSet.has(row.originalIndex)}
+                        onChange={(event) => toggleRowSelection(row.originalIndex, index, event.nativeEvent instanceof MouseEvent && event.nativeEvent.shiftKey)}
+                        aria-label={`Select ${getUrl(row.item)}`}
+                        className="h-4 w-4 cursor-pointer accent-blue-500"
+                      />
+                    </td>
+                    {activeColumns.map((column, columnIndex) => (
+                      <td key={`${activeModuleName}-row-${index}-col-${columnIndex}`} className={`px-3 py-3 ${column.className || ''}`}>
+                        {column.render(row.item, row.originalIndex)}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
     </div>
   )
 }

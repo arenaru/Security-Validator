@@ -44,9 +44,7 @@ frontend/
 │   ├── components/
 │   │   ├── ScanForm.tsx           # Form for creating scans
 │   │   ├── ProgressBar.tsx        # Progress indicator
-│   │   ├── SummaryCards.tsx       # Summary statistics
-│   │   ├── ResultsTable.tsx       # Detailed results
-│   │   └── ReportDownload.tsx     # XLSX export
+│   │   └── ResultsTable.tsx       # Detailed results
 │   ├── api/
 │   │   └── client.ts              # Axios client
 │   ├── types/
