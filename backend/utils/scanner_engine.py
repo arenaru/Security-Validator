@@ -16,13 +16,18 @@ from backend.services.sslHostnameMismatch import run_ssl_hostname_mismatch_scan
 from backend.services.responseCode import run_response_code_scan
 
 
-def iter_scanning_engine_results(targets_list, selected_scans, temp_file_path):
+def iter_scanning_engine_results(targets_list, selected_scans, temp_file_path, timeout=None):
     """
     Jalankan module scan paralel lalu yield hasil per module saat module tersebut selesai.
     Yield format: (scan_type, payload, error)
+
+    If timeout (seconds) is set, modules still pending when the deadline is
+    reached yield a TimeoutError and queued futures are cancelled. Threads
+    already running a module cannot be force-killed and finish in the background.
     """
 
-    with concurrent.futures.ThreadPoolExecutor() as executor:
+    executor = concurrent.futures.ThreadPoolExecutor()
+    try:
         future_to_scan_type = {}
 
         if "SSL Certificate Check" in selected_scans:
@@ -78,12 +83,26 @@ def iter_scanning_engine_results(targets_list, selected_scans, temp_file_path):
         if "PHP Version Disclosure" in selected_scans:
             future_to_scan_type[executor.submit(run_php_scan, targets_list)] = "PHP Version Disclosure"
 
-        for future in concurrent.futures.as_completed(future_to_scan_type):
-            scan_type = future_to_scan_type[future]
-            try:
-                yield scan_type, future.result(), None
-            except Exception as exc:
-                yield scan_type, None, exc
+        try:
+            for future in concurrent.futures.as_completed(future_to_scan_type, timeout=timeout):
+                scan_type = future_to_scan_type[future]
+                try:
+                    yield scan_type, future.result(), None
+                except Exception as exc:
+                    yield scan_type, None, exc
+        except concurrent.futures.TimeoutError:
+            for future, scan_type in future_to_scan_type.items():
+                if future.cancelled():
+                    yield scan_type, None, TimeoutError("module cancelled after job timeout")
+                elif future.done():
+                    try:
+                        yield scan_type, future.result(), None
+                    except Exception as exc:
+                        yield scan_type, None, exc
+                else:
+                    yield scan_type, None, TimeoutError(f"job timeout of {timeout}s exceeded")
+    finally:
+        executor.shutdown(wait=False, cancel_futures=True)
 
 
 def start_scanning_engine(targets_list, selected_scans, temp_file_path):

@@ -2,7 +2,7 @@ export interface ScanCreateRequest {
   targets: string[]
   modules: string[]
   options?: {
-    timeoutSeconds?: number
+    timeout_seconds?: number
     parallelism?: number
   }
 }

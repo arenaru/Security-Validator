@@ -6,6 +6,7 @@ from typing import Any
 from urllib.parse import urlparse
 
 from backend.models.scan_models import (
+    MAX_TARGETS_PER_SCAN,
     MODULE_NAMES,
     ModuleError,
     ModuleResult,
@@ -26,6 +27,8 @@ class ScanCreateRequest:
     def validate(self) -> None:
         if not self.targets:
             raise ValueError("targets must not be empty")
+        if len(self.targets) > MAX_TARGETS_PER_SCAN:
+            raise ValueError(f"targets must not exceed {MAX_TARGETS_PER_SCAN} items")
         if not self.modules:
             raise ValueError("modules must not be empty")
 

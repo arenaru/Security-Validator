@@ -1,5 +1,6 @@
 import requests
 import urllib3
+import concurrent.futures
 from urllib.parse import urlparse
 
 # Suppress SSL warnings
@@ -212,14 +213,20 @@ def check_cookie_httponly(target):
     }
 
 
-def run_cookie_httponly_scan(targets_list):
+def run_cookie_httponly_scan(targets_list, max_threads=20):
     """
-    Run HttpOnly cookie scan for multiple targets.
-    Returns: list of results.
+    Run HttpOnly cookie scan for multiple targets in parallel.
+    Returns: list of results in original target order.
     """
-    results = []
-    for target in targets_list:
-        if target.strip():
-            result = check_cookie_httponly(target)
-            results.append(result)
+    valid_targets = [target for target in targets_list if target.strip()]
+    results = [None] * len(valid_targets)
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_threads) as executor:
+        futures = {
+            executor.submit(check_cookie_httponly, target): index
+            for index, target in enumerate(valid_targets)
+        }
+        for future in concurrent.futures.as_completed(futures):
+            results[futures[future]] = future.result()
+
     return results

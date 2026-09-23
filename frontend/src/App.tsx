@@ -41,7 +41,7 @@ function App() {
         targets,
         modules,
         options: {
-          timeoutSeconds: 30,
+          timeout_seconds: 600,
           parallelism: 6,
         },
       })

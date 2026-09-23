@@ -23,6 +23,8 @@ MODULE_NAMES: tuple[str, ...] = (
     "PHP Version Disclosure",
 )
 
+MAX_TARGETS_PER_SCAN = 100
+
 
 class ScanJobStatus(str, Enum):
     PENDING = "pending"
@@ -69,7 +71,7 @@ def normalize_result_status(raw_status: str | None) -> ResultStatus:
 
 @dataclass(slots=True)
 class ScanOptions:
-    timeout_seconds: int = 30
+    timeout_seconds: int = 600
     parallelism: int = 6
 
 

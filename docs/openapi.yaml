@@ -62,7 +62,7 @@ paths:
                     - HSTS Security Check
                     - Security Headers Check
                   options:
-                    timeoutSeconds: 30
+                    timeout_seconds: 600
                     parallelism: 6
       responses:
         '202':
@@ -219,6 +219,7 @@ components:
         targets:
           type: array
           minItems: 1
+          maxItems: 100
           items:
             type: string
             minLength: 1
@@ -236,11 +237,12 @@ components:
       type: object
       additionalProperties: false
       properties:
-        timeoutSeconds:
+        timeout_seconds:
           type: integer
           minimum: 5
-          maximum: 300
-          default: 30
+          maximum: 3600
+          default: 600
+          description: Whole-job deadline in seconds; pending modules yield a timeout error when exceeded
         parallelism:
           type: integer
           minimum: 1

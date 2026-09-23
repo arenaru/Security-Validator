@@ -23,7 +23,7 @@ POST /api/scans
     "Security Headers Check"
   ],
   "options": {
-    "timeoutSeconds": 30,
+    "timeout_seconds": 600,
     "parallelism": 6
   }
 }

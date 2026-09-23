@@ -61,7 +61,12 @@ class ScanService:
 				temp_file.write("\n".join(job.targets))
 				temp_path = temp_file.name
 
-			for module_name, payload, err in iter_scanning_engine_results(job.targets, job.modules, temp_path):
+			for module_name, payload, err in iter_scanning_engine_results(
+				job.targets,
+				job.modules,
+				temp_path,
+				timeout=job.options.timeout_seconds,
+			):
 				if err is not None:
 					job.results[module_name] = []
 					job.errors.append(ModuleError(module=module_name, message=str(err)))
