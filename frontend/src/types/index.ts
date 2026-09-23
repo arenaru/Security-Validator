@@ -4,6 +4,7 @@ export interface ScanCreateRequest {
   options?: {
     timeout_seconds?: number
     parallelism?: number
+    allow_private_targets?: boolean
   }
 }
 

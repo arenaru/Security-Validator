@@ -73,6 +73,7 @@ def normalize_result_status(raw_status: str | None) -> ResultStatus:
 class ScanOptions:
     timeout_seconds: int = 600
     parallelism: int = 6
+    allow_private_targets: bool = False
 
 
 @dataclass(slots=True)

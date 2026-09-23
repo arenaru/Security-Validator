@@ -1,28 +1,13 @@
 import requests
 import urllib3
 import concurrent.futures
-from urllib.parse import urlparse
+
+from backend.utils.target_resolver import build_target_candidates
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 TIMEOUT = 10
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"
-
-
-def build_target_candidates(target):
-    """
-    Return request candidates in priority order: HTTPS first, then HTTP.
-    """
-    target = target.strip().rstrip('/')
-    if target.startswith(('http://', 'https://')):
-        parsed = urlparse(target)
-        host = parsed.netloc or parsed.path
-        path = parsed.path if parsed.netloc else ""
-        if parsed.query:
-            path = f"{path}?{parsed.query}"
-        candidates = [f"https://{host}{path}", f"http://{host}{path}"]
-        return list(dict.fromkeys(candidates))
-    return [f"https://{target}", f"http://{target}"]
 
 
 def _classify_status(status_code):

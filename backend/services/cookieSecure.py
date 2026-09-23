@@ -1,26 +1,12 @@
 import requests
 import urllib3
 import concurrent.futures
-from urllib.parse import urlparse
+
+from backend.utils.target_resolver import build_target_candidates
 
 # Suppress SSL warnings
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-
-def build_target_candidates(target):
-    """
-    Return request candidates in priority order: HTTPS first, then HTTP.
-    """
-    target = target.strip().rstrip('/')
-    if target.startswith(('http://', 'https://')):
-        parsed = urlparse(target)
-        host = parsed.netloc or parsed.path
-        path = parsed.path if parsed.netloc else ""
-        if parsed.query:
-            path = f"{path}?{parsed.query}"
-        candidates = [f"https://{host}{path}", f"http://{host}{path}"]
-        return list(dict.fromkeys(candidates))
-    return [f"https://{target}", f"http://{target}"]
 
 def parse_set_cookie_header(response_obj, cookies_dict):
     """

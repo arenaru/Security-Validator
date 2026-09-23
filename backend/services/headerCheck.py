@@ -2,7 +2,8 @@ import requests
 import urllib3
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
-from urllib.parse import urlparse
+
+from backend.utils.target_resolver import build_target_candidates
 
 # Disable warning SSL self-signed
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -17,21 +18,6 @@ SECURITY_HEADERS = {
     "Permissions-Policy": "Browser Features Control"
 }
 
-
-def build_target_candidates(target):
-    """
-    Return request candidates in priority order: HTTPS first, then HTTP.
-    """
-    target = target.strip().rstrip('/')
-    if target.startswith(('http://', 'https://')):
-        parsed = urlparse(target)
-        host = parsed.netloc or parsed.path
-        path = parsed.path if parsed.netloc else ""
-        if parsed.query:
-            path = f"{path}?{parsed.query}"
-        candidates = [f"https://{host}{path}", f"http://{host}{path}"]
-        return list(dict.fromkeys(candidates))
-    return [f"https://{target}", f"http://{target}"]
 
 def check_security_headers(targets):
     results = []

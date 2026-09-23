@@ -1,17 +1,16 @@
 import subprocess
 import shutil
-from urllib.parse import urlparse
+
+from backend.utils.target_resolver import UnsafeTargetError, extract_nmap_host
 
 def check_sslv3(target):
     if not shutil.which("nmap"):
         return {"target": target, "status": "ERROR", "details": "Nmap not installed"}
 
-    # Parse domain from URL
-    if "://" not in target:
-        target = "https://" + target
-    
-    parsed = urlparse(target)
-    domain_only = parsed.netloc # Ini cuma ambil "example.com"
+    try:
+        domain_only = extract_nmap_host(target)
+    except UnsafeTargetError as exc:
+        return {"target": target, "status": "ERROR", "details": str(exc)}
 
     try:
         # Scan khusus cipher enum

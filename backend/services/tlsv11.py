@@ -1,6 +1,7 @@
 import subprocess
 import shutil
-from urllib.parse import urlparse
+
+from backend.utils.target_resolver import UnsafeTargetError, extract_nmap_host
 
 def check_tls11(target):
     if not shutil.which("nmap"):
@@ -11,16 +12,15 @@ def check_tls11(target):
             "vuln_name": None
         }
     
-    # Parse domain from URL (Pastikan formatnya bersih untuk Nmap)
-    target_clean = target.strip()
-    if "://" not in target_clean:
-        target_clean = "https://" + target_clean
-    
     try:
-        parsed = urlparse(target_clean)
-        domain_only = parsed.netloc # Ambil "example.com" saja tanpa https://
-    except:
-        domain_only = target.strip() # Fallback jika parse gagal
+        domain_only = extract_nmap_host(target)
+    except UnsafeTargetError as exc:
+        return {
+            "target": target,
+            "status": "ERROR",
+            "details": str(exc),
+            "vuln_name": None
+        }
 
     try:
         # Menjalankan Nmap

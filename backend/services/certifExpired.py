@@ -12,7 +12,10 @@ def sanitize(domain):
     domain = domain.strip()
     if domain.startswith("http://") or domain.startswith("https://"):
         domain = urlparse(domain).netloc
-    return domain.split("/")[0]
+    domain = domain.split("/")[0]
+    if ":" in domain:
+        domain = domain.split(":")[0]
+    return domain
 
 def cek_ssl_expiry(domain, port=443, warning_days=30):
     # KEMBALI KE MODE STRICT (Standard Browser Check)

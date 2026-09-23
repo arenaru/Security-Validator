@@ -3,6 +3,7 @@ import time
 
 from backend.models.scan_models import ScanOptions
 from backend.schemas.scan_schemas import ScanCreateRequest
+from backend.services import scan_service as scan_service_module
 from backend.services.scan_service import InMemoryScanStore, ScanService
 from backend.utils import scanner_engine
 
@@ -12,7 +13,14 @@ def build_service():
     return ScanService(store=store)
 
 
+def patch_target_pipeline(monkeypatch):
+    monkeypatch.setattr(scan_service_module, "validate_target_safety", lambda *args, **kwargs: None)
+    monkeypatch.setattr(scan_service_module, "resolve_targets", lambda targets, **kwargs: list(targets))
+
+
 def test_run_scan_enforces_job_deadline(monkeypatch):
+    patch_target_pipeline(monkeypatch)
+
     release = threading.Event()
 
     def hanging_module(targets):
@@ -43,6 +51,8 @@ def test_run_scan_enforces_job_deadline(monkeypatch):
 
 
 def test_run_scan_completes_when_module_is_fast(monkeypatch):
+    patch_target_pipeline(monkeypatch)
+
     def fast_module(targets):
         return [{"URL": "https://example.com", "Status": "SECURE", "Detail": "ok"}]
 

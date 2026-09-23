@@ -1,7 +1,8 @@
 import requests
 import urllib3
 import concurrent.futures
-from urllib.parse import urlparse
+
+from backend.utils.target_resolver import build_target_candidates
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -35,21 +36,8 @@ def get_signatures():
         "Unexpected end of JSON input" # Signature baru untuk payload {"test":
     ]
 
-def fix_url(url):
-    url = url.strip()
-    url = url.rstrip('/')
-    if url.startswith(('http://', 'https://')):
-        parsed = urlparse(url)
-        host = parsed.netloc or parsed.path
-        path = parsed.path if parsed.netloc else ""
-        if parsed.query:
-            path = f"{path}?{parsed.query}"
-        candidates = [f"https://{host}{path}", f"http://{host}{path}"]
-        return list(dict.fromkeys(candidates))
-    return [f"https://{url}", f"http://{url}"]
-
 def scan_single_target(target):
-    candidate_urls = fix_url(target)
+    candidate_urls = build_target_candidates(target)
     signatures = get_signatures()
     last_error = None
 

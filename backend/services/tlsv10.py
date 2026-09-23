@@ -1,17 +1,16 @@
 import subprocess
 import shutil
-from urllib.parse import urlparse
+
+from backend.utils.target_resolver import UnsafeTargetError, extract_nmap_host
 
 def check_tls10(target):
     if not shutil.which("nmap"):
         return {"target": target, "status": "ERROR", "details": "Nmap not installed"}
 
-    # Parse domain from URL
-    if "://" not in target:
-        target = "https://" + target
-    
-    parsed = urlparse(target)
-    domain_only = parsed.netloc # Ini cuma ambil "example.com"
+    try:
+        domain_only = extract_nmap_host(target)
+    except UnsafeTargetError as exc:
+        return {"target": target, "status": "ERROR", "details": str(exc)}
 
     try:
         cmd = ["nmap", "--script", "ssl-enum-ciphers", "-p", "443", "-Pn", domain_only]

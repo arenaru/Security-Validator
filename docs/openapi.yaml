@@ -248,6 +248,10 @@ components:
           minimum: 1
           maximum: 32
           default: 6
+        allow_private_targets:
+          type: boolean
+          default: false
+          description: Allow scanning targets that resolve to private, loopback, link-local, or reserved network ranges (for internal scans); rejected by default
 
     ScanAcceptedResponse:
       type: object

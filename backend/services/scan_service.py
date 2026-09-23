@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import concurrent.futures
 from dataclasses import dataclass
 from io import BytesIO
 from pathlib import Path
@@ -10,6 +11,7 @@ import pandas as pd
 from backend.models.scan_models import ModuleError, ModuleResult, ScanJob, ScanJobStatus, ScanOptions, utc_now
 from backend.schemas.scan_schemas import ScanCreateRequest, ScanStatusResponse, ScanSummaryResponse
 from backend.utils.scanner_engine import iter_scanning_engine_results
+from backend.utils.target_resolver import UnsafeTargetError, resolve_targets, validate_target_safety
 
 
 class InMemoryScanStore:
@@ -42,9 +44,36 @@ class ScanService:
 
 		options = request.options if isinstance(request.options, ScanOptions) else ScanOptions()
 
+		self._validate_targets(
+			clean_targets,
+			allow_private=options.allow_private_targets,
+			workers=max(1, options.parallelism),
+		)
+
 		job = ScanJob(targets=clean_targets, modules=clean_modules, options=options)
 		self.store.save(job)
 		return job
+
+	def _validate_targets(self, targets: list[str], allow_private: bool, workers: int = 10) -> None:
+		if not targets:
+			return
+
+		errors: list[str | None] = [None] * len(targets)
+		with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
+			futures = {
+				executor.submit(validate_target_safety, target, allow_private): index
+				for index, target in enumerate(targets)
+			}
+			for future in concurrent.futures.as_completed(futures):
+				index = futures[future]
+				try:
+					future.result()
+				except UnsafeTargetError as exc:
+					errors[index] = str(exc)
+
+		failed = [message for message in errors if message]
+		if failed:
+			raise ValueError("unsafe or unresolvable targets: " + "; ".join(failed))
 
 	def run_scan(self, scan_id: str) -> ScanJob:
 		job = self.require_job(scan_id)
@@ -57,12 +86,14 @@ class ScanService:
 		temp_path: str | None = None
 
 		try:
+			resolved_targets = resolve_targets(job.targets, max_threads=max(1, job.options.parallelism))
+
 			with NamedTemporaryFile(mode="w", suffix="_targets.txt", delete=False, encoding="utf-8") as temp_file:
-				temp_file.write("\n".join(job.targets))
+				temp_file.write("\n".join(resolved_targets))
 				temp_path = temp_file.name
 
 			for module_name, payload, err in iter_scanning_engine_results(
-				job.targets,
+				resolved_targets,
 				job.modules,
 				temp_path,
 				timeout=job.options.timeout_seconds,
