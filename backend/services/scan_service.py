@@ -100,7 +100,7 @@ class ScanService:
 			):
 				if err is not None:
 					job.results[module_name] = []
-					job.errors.append(ModuleError(module=module_name, message=str(err)))
+					job.errors.append(ModuleError(module=module_name, message=str(err)[:200]))
 					job.touch()
 					self.store.save(job)
 					continue
@@ -120,7 +120,7 @@ class ScanService:
 
 		except Exception as exc:
 			job.status = ScanJobStatus.FAILED
-			job.errors.append(ModuleError(module="engine", message=str(exc)))
+			job.errors.append(ModuleError(module="engine", message=str(exc)[:200]))
 		finally:
 			job.finished_at = utc_now()
 			job.touch()

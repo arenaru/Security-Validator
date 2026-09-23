@@ -21,7 +21,7 @@ def parse_set_cookie_header(response_obj, cookies_dict):
             for header_name, header_value in headers:
                 if header_name.lower() == 'set-cookie':
                     parse_single_cookie(header_value, cookies_dict)
-    except:
+    except Exception:
         # Fallback: use regular headers (may miss some cookies if multiple Set-Cookie headers)
         set_cookie = response_obj.headers.get('Set-Cookie', '')
         if set_cookie:

@@ -115,7 +115,7 @@ class ModuleResult:
             or payload.get("Message")
             or payload.get("Error")
             or "-"
-        )
+        )[:200]
         vuln_name = payload.get("vuln_name")
 
         return cls(

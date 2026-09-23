@@ -53,13 +53,14 @@ def scan_single_target(target):
         methods_to_try = ["POST", "PUT", "GET"]
         request_succeeded = False
 
+        session = requests.Session()
         try:
             # Loop Method (POST/PUT/GET)
             for method in methods_to_try:
                 # Loop Payload (Coba berbagai jenis sampah)
                 for payload in BAD_PAYLOADS:
                     try:
-                        response = requests.request(
+                        response = session.request(
                             method=method,
                             url=url,
                             headers=HEADERS,
@@ -94,6 +95,8 @@ def scan_single_target(target):
         except Exception as e:
             last_error = (url, str(e))
             continue
+        finally:
+            session.close()
 
     if last_error:
         return {

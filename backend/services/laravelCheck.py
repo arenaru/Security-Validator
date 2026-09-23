@@ -54,10 +54,11 @@ def scan_single_target(target):
 
         methods = ['PUT', 'PATCH', 'DELETE', 'POST']
 
+        session = requests.Session()
         try:
             # --- PHASE 1: Ignition RCE Check (CRITICAL) ---
             target_ign = f"{url}/_ignition/health-check"
-            r_health = requests.get(target_ign, headers=HEADERS, timeout=TIMEOUT, verify=False)
+            r_health = session.get(target_ign, headers=HEADERS, timeout=TIMEOUT, verify=False)
             if r_health.status_code == 200 and "can_execute_commands" in r_health.text:
                 result["status"] = "CRITICAL"
                 result["payload"] = f"GET {target_ign}"
@@ -71,7 +72,7 @@ def scan_single_target(target):
             for endpoint in endpoints:
                 for method in methods:
                     try:
-                        resp = requests.request(
+                        resp = session.request(
                             method=method,
                             url=endpoint,
                             headers=HEADERS,
@@ -96,7 +97,7 @@ def scan_single_target(target):
 
             # --- PHASE 3: 404 Trigger (WARNING) ---
             bad_path = "/halaman_ini_pasti_tidak_ada_12345"
-            r_404 = requests.get(f"{url}{bad_path}", headers=HEADERS, timeout=TIMEOUT, verify=False)
+            r_404 = session.get(f"{url}{bad_path}", headers=HEADERS, timeout=TIMEOUT, verify=False)
             for sig in signatures:
                 if sig in r_404.text:
                     result["status"] = "WARNING"
@@ -114,6 +115,8 @@ def scan_single_target(target):
         except Exception as e:
             last_error = (url, str(e))
             continue
+        finally:
+            session.close()
 
     if last_error:
         return {
