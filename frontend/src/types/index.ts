@@ -92,4 +92,5 @@ export const MODULE_NAMES = [
   'Laravel Debug Mode',
   'Node.js Debug Mode',
   'PHP Version Disclosure',
+  'IP Country Lookup',
 ] as const

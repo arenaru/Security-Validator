@@ -460,6 +460,7 @@ components:
         - Laravel Debug Mode
         - Node.js Debug Mode
         - PHP Version Disclosure
+        - IP Country Lookup
 
     ErrorResponse:
       type: object

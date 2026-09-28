@@ -21,6 +21,7 @@ MODULE_NAMES: tuple[str, ...] = (
     "Laravel Debug Mode",
     "Node.js Debug Mode",
     "PHP Version Disclosure",
+    "IP Country Lookup",
 )
 
 MAX_TARGETS_PER_SCAN = 100

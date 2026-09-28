@@ -4,6 +4,7 @@ import concurrent.futures
 from backend.services.certifExpired import run_ssl_scan
 from backend.services.hstsChecker import run_hsts_scan
 from backend.services.headerCheck import check_security_headers
+from backend.services.ipCountry import run_ip_country_scan
 from backend.services.laravelCheck import run_laravel_scan
 from backend.services.nodeDebug import run_node_scan
 from backend.services.tlsScanner import run_tls_scan
@@ -74,6 +75,9 @@ def iter_scanning_engine_results(targets_list, selected_scans, timeout=None, par
 
         if "PHP Version Disclosure" in selected_scans:
             future_to_scan_type[executor.submit(run_php_scan, targets_list, parallelism)] = "PHP Version Disclosure"
+
+        if "IP Country Lookup" in selected_scans:
+            future_to_scan_type[executor.submit(run_ip_country_scan, targets_list, parallelism)] = "IP Country Lookup"
 
         try:
             for future in concurrent.futures.as_completed(future_to_scan_type, timeout=timeout):

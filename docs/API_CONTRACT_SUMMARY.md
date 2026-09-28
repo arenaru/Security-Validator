@@ -57,6 +57,7 @@ POST /api/scans
 - Laravel Debug Mode
 - Node.js Debug Mode
 - PHP Version Disclosure
+- IP Country Lookup
 
 ## Error Envelope
 ```json

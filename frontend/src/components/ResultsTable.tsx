@@ -215,6 +215,19 @@ function getColumnsForModule(moduleName: string, statusColors: Record<string, st
     ]
   }
 
+  if (moduleName === 'IP Country Lookup') {
+    return [
+      indexCol,
+      { key: 'url', header: 'Target', className: 'min-w-[280px]', sortable: true, sortValue: (item) => getUrl(item), render: (item) => <span className="text-slate-100 break-all">{getUrl(item)}</span> },
+      statusCol,
+      { key: 'ip', header: 'IP Address', className: 'min-w-[150px] font-mono', sortable: true, sortValue: (item) => normalizeCell(getRaw(item, 'IP')), render: (item) => <span className="font-mono text-slate-200">{normalizeCell(getRaw(item, 'IP'))}</span> },
+      { key: 'country', header: 'Country', className: 'min-w-[200px]', sortable: true, sortValue: (item) => normalizeCell(getRaw(item, 'Country')), render: (item) => <span className="text-slate-100">{normalizeCell(getRaw(item, 'Country Code')) !== '-' ? `${normalizeCell(getRaw(item, 'Country Code'))} — ` : ''}{normalizeCell(getRaw(item, 'Country'))}</span> },
+      { key: 'city', header: 'City', className: 'min-w-[160px]', sortable: true, sortValue: (item) => normalizeCell(getRaw(item, 'City')), render: (item) => <span className="text-slate-200">{normalizeCell(getRaw(item, 'City'))}</span> },
+      { key: 'isp', header: 'ISP', className: 'min-w-[240px]', sortable: true, sortValue: (item) => normalizeCell(getRaw(item, 'ISP')), render: (item) => <span className="text-slate-200 break-words">{normalizeCell(getRaw(item, 'ISP'))}</span> },
+      { key: 'as', header: 'AS', className: 'min-w-[260px]', sortable: true, sortValue: (item) => normalizeCell(getRaw(item, 'AS')), render: (item) => <span className="text-slate-300 font-mono text-xs break-all">{normalizeCell(getRaw(item, 'AS'))}</span> },
+    ]
+  }
+
   return [
     indexCol,
     { key: 'target', header: 'Target', className: 'min-w-[320px]', sortable: true, sortValue: (item) => getUrl(item), render: (item) => <span className="text-slate-100 break-all">{getUrl(item)}</span> },
