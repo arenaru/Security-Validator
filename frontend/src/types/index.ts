@@ -94,3 +94,158 @@ export const MODULE_NAMES = [
   'PHP Version Disclosure',
   'IP Country Lookup',
 ] as const
+
+export interface TargetGeoInfo {
+  ip?: string
+  country?: string
+  countryCode?: string
+  city?: string
+  isp?: string
+  as?: string
+}
+
+export interface TargetFinding {
+  module: string
+  status: 'secure' | 'warning' | 'insecure' | 'error' | 'info'
+  details: string
+  severity?: 'low' | 'medium' | 'high' | 'critical'
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  raw?: Record<string, any>
+  missingHeaders?: string[]
+  payload?: string
+  evidence?: string
+  sisaHari?: string | number
+  expiredDate?: string
+  statusCode?: string | number
+}
+
+export interface TargetReport {
+  target: string
+  normalizedDomain: string
+  overallStatus: 'secure' | 'warning' | 'insecure' | 'error'
+  geo?: TargetGeoInfo
+  issues: TargetFinding[]
+  passed: TargetFinding[]
+  counts: {
+    total: number
+    insecure: number
+    warning: number
+    secure: number
+    error: number
+  }
+}
+
+export interface ModuleCategoryDef {
+  id: string
+  title: string
+  description: string
+  icon: string
+  modules: typeof MODULE_NAMES[number][]
+}
+
+export const MODULE_CATEGORIES: ModuleCategoryDef[] = [
+  {
+    id: 'ssl-tls',
+    title: 'SSL / TLS Security',
+    description: 'Sertifikat SSL, hostname mismatch, dan protokol usang (SSLv3, TLS 1.0/1.1)',
+    icon: 'Shield',
+    modules: [
+      'SSL Certificate Check',
+      'SSL Certificate Hostname Mismatch',
+      'SSLv3 Detection',
+      'TLS 1.0 Detection',
+      'TLS 1.1 Detection',
+    ],
+  },
+  {
+    id: 'web-headers',
+    title: 'Web & Headers Security',
+    description: 'Response code server, HSTS, dan missing security headers (CSP, X-Frame, dll.)',
+    icon: 'Globe',
+    modules: [
+      'Response Code Check',
+      'HSTS Security Check',
+      'Security Headers Check',
+    ],
+  },
+  {
+    id: 'cookies',
+    title: 'Cookie & Session Security',
+    description: 'Proteksi flag Secure dan HttpOnly pada cookies untuk mencegah XSS & man-in-the-middle',
+    icon: 'Cookie',
+    modules: [
+      'Cookie Secure Flag',
+      'Cookie HttpOnly Flag',
+    ],
+  },
+  {
+    id: 'framework-leaks',
+    title: 'Framework & Info Leaks',
+    description: 'Deteksi debug mode bocor (Laravel, Node.js), versi PHP terekspos, dan lookup IP',
+    icon: 'Server',
+    modules: [
+      'Laravel Debug Mode',
+      'Node.js Debug Mode',
+      'PHP Version Disclosure',
+      'IP Country Lookup',
+    ],
+  },
+]
+
+export interface ScanPreset {
+  id: string
+  name: string
+  badge: string
+  description: string
+  modules: typeof MODULE_NAMES[number][]
+}
+
+export const SCAN_PRESETS: ScanPreset[] = [
+  {
+    id: 'full',
+    name: 'Full Audit',
+    badge: '14 Modul',
+    description: 'Pemeriksaan keamanan lengkap seluruh 14 modul',
+    modules: [...MODULE_NAMES],
+  },
+  {
+    id: 'quick',
+    name: 'Quick Check',
+    badge: '4 Modul',
+    description: 'Audit cepat: SSL, Headers, HSTS, dan Response Code (< 15 detik)',
+    modules: [
+      'SSL Certificate Check',
+      'Security Headers Check',
+      'HSTS Security Check',
+      'Response Code Check',
+    ],
+  },
+  {
+    id: 'ssl',
+    name: 'SSL / TLS Only',
+    badge: '5 Modul',
+    description: 'Fokus sertifikat SSL dan kerentanan protokol enkripsi transport',
+    modules: [
+      'SSL Certificate Check',
+      'SSL Certificate Hostname Mismatch',
+      'SSLv3 Detection',
+      'TLS 1.0 Detection',
+      'TLS 1.1 Detection',
+    ],
+  },
+  {
+    id: 'web',
+    name: 'Web & Framework',
+    badge: '6 Modul',
+    description: 'Audit kerentanan aplikasi web, debug mode bocor, dan proteksi cookies',
+    modules: [
+      'Laravel Debug Mode',
+      'Node.js Debug Mode',
+      'PHP Version Disclosure',
+      'Security Headers Check',
+      'Cookie Secure Flag',
+      'Cookie HttpOnly Flag',
+    ],
+  },
+]
+
