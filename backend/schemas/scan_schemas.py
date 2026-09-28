@@ -15,6 +15,7 @@ from backend.models.scan_models import (
     ScanJob,
     ScanJobStatus,
     ScanOptions,
+    SkippedTarget,
 )
 
 
@@ -67,6 +68,7 @@ class ScanStatusResponse:
     progress: Progress
     results: dict[str, list[ModuleResult]] | None
     errors: list[ModuleError]
+    skipped_targets: list[SkippedTarget]
 
     @classmethod
     def from_job(cls, job: ScanJob, include_results: bool = True) -> "ScanStatusResponse":
@@ -82,6 +84,7 @@ class ScanStatusResponse:
             progress=job.progress(),
             results=job.results if include_results else None,
             errors=job.errors,
+            skipped_targets=job.skipped_targets,
         )
 
 

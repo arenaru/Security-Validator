@@ -140,6 +140,12 @@ class ModuleError:
 
 
 @dataclass(slots=True)
+class SkippedTarget:
+    target: str
+    reason: str
+
+
+@dataclass(slots=True)
 class ScanJob:
     targets: list[str]
     modules: list[str]
@@ -154,6 +160,7 @@ class ScanJob:
     errors: list[ModuleError] = field(default_factory=list)
     counts: dict[str, dict[str, int]] = field(default_factory=dict)
     domain_worst: dict[str, Any] = field(default_factory=dict)
+    skipped_targets: list[SkippedTarget] = field(default_factory=list)
 
     def progress(self) -> Progress:
         completed = len(self.results)

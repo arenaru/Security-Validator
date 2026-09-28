@@ -6,7 +6,7 @@ from io import BytesIO
 
 import pandas as pd
 
-from backend.models.scan_models import ModuleError, ModuleResult, ResultStatus, ScanJob, ScanJobStatus, ScanOptions, TRUE_POSITIVE_STATUSES, utc_now
+from backend.models.scan_models import ModuleError, ModuleResult, ResultStatus, ScanJob, ScanJobStatus, ScanOptions, SkippedTarget, TRUE_POSITIVE_STATUSES, utc_now
 from backend.schemas.scan_schemas import ScanCreateRequest, ScanStatusResponse, ScanSummaryResponse, merge_domain_status, normalize_target_domain
 from backend.utils.scanner_engine import iter_scanning_engine_results
 from backend.utils.target_resolver import UnsafeTargetError, resolve_targets, validate_target_safety
@@ -56,21 +56,25 @@ class ScanService:
 
 		options = request.options if isinstance(request.options, ScanOptions) else ScanOptions()
 
-		self._validate_targets(
+		valid_targets, skipped = self._validate_targets(
 			clean_targets,
 			allow_private=options.allow_private_targets,
 			workers=max(1, options.parallelism),
 		)
 
-		job = ScanJob(targets=clean_targets, modules=clean_modules, options=options)
+		if not valid_targets:
+			skipped_summary = "; ".join(f"{s.target}: {s.reason}" for s in skipped)
+			raise ValueError(f"no valid targets remaining after validation — skipped: {skipped_summary}")
+
+		job = ScanJob(targets=valid_targets, modules=clean_modules, options=options, skipped_targets=skipped)
 		self.store.save(job)
 		return job
 
-	def _validate_targets(self, targets: list[str], allow_private: bool, workers: int = 10) -> None:
+	def _validate_targets(self, targets: list[str], allow_private: bool, workers: int = 10) -> tuple[list[str], list[SkippedTarget]]:
 		if not targets:
-			return
+			return [], []
 
-		errors: list[str | None] = [None] * len(targets)
+		results: list[tuple[str, str | None]] = [(t, None) for t in targets]
 		with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
 			futures = {
 				executor.submit(validate_target_safety, target, allow_private): index
@@ -81,11 +85,17 @@ class ScanService:
 				try:
 					future.result()
 				except UnsafeTargetError as exc:
-					errors[index] = str(exc)
+					results[index] = (targets[index], str(exc))
 
-		failed = [message for message in errors if message]
-		if failed:
-			raise ValueError("unsafe or unresolvable targets: " + "; ".join(failed))
+		valid_targets: list[str] = []
+		skipped: list[SkippedTarget] = []
+		for target, error in results:
+			if error is None:
+				valid_targets.append(target)
+			else:
+				skipped.append(SkippedTarget(target=target, reason=error))
+
+		return valid_targets, skipped
 
 	def run_scan(self, scan_id: str) -> ScanJob:
 		job = self.require_job(scan_id)
