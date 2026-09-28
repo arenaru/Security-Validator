@@ -1,3 +1,4 @@
+import concurrent.futures
 import requests
 import urllib3
 from requests.adapters import HTTPAdapter
@@ -18,63 +19,56 @@ SECURITY_HEADERS = {
     "Permissions-Policy": "Browser Features Control"
 }
 
+_RETRY_STRATEGY = Retry(
+    total=2,
+    backoff_factor=1,
+    status_forcelist=[429, 500, 502, 503, 504],
+    allowed_methods=["HEAD", "GET", "OPTIONS"]
+)
 
-def check_security_headers(targets):
-    results = []
-    
-    # Setup retry strategy with exponential backoff
-    retry_strategy = Retry(
-        total=2,  # Max 2 retries
-        backoff_factor=1,  # 1s, 2s, 4s
-        status_forcelist=[429, 500, 502, 503, 504],
-        allowed_methods=["HEAD", "GET", "OPTIONS"]
-    )
-    
-    # Create session dengan retry
+_HEADERS_REQ = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+}
+
+
+def _check_single_target(url: str) -> dict:
     session = requests.Session()
-    adapter = HTTPAdapter(max_retries=retry_strategy)
+    adapter = HTTPAdapter(max_retries=_RETRY_STRATEGY)
     session.mount("http://", adapter)
     session.mount("https://", adapter)
-    
-    # User Agent biar ga diblok WAF
-    headers_req = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+
+    domain = url.strip()
+    candidates = build_target_candidates(domain)
+
+    scan_data = {
+        "URL": candidates[0] if candidates else domain,
+        "Status Code": "N/A",
+        "Redirects": 0,
+        "Missing Headers": [],
+        "Score": 0,
+        "Status": "UNKNOWN",
+        "Error": None,
     }
 
-    for url in targets:
-        domain = url.strip()
-        candidates = build_target_candidates(domain)
+    request_succeeded = False
+    last_error = None
 
-        scan_data = {
-            "URL": candidates[0] if candidates else domain,
-            "Status Code": "N/A",
-            "Redirects": 0,
-            "Missing Headers": [],
-            "Score": 0,
-            "Status": "UNKNOWN",
-            "Error": None
-        }
-
-        request_succeeded = False
-        last_error = None
-
+    try:
         for candidate in candidates:
             try:
-                # Request dengan timeout lebih panjang & redirect limit
                 response = session.get(
                     candidate,
-                    headers=headers_req,
+                    headers=_HEADERS_REQ,
                     verify=False,
-                    timeout=12,  # 12 detik
+                    timeout=12,
                     allow_redirects=True,
-                    stream=False
+                    stream=False,
                 )
 
                 scan_data["URL"] = candidate
                 scan_data["Status Code"] = response.status_code
-                scan_data["Redirects"] = len(response.history)  # Count redirect chain
+                scan_data["Redirects"] = len(response.history)
 
-                # Validasi status code (hanya accept 200-299)
                 if not (200 <= response.status_code < 300):
                     scan_data["Status"] = "INVALID_STATUS"
                     scan_data["Error"] = f"HTTP {response.status_code} (Expected 2xx)"
@@ -85,9 +79,7 @@ def check_security_headers(targets):
                 found_count = 0
                 missing_list = []
 
-                # Loop cek satu-satu dengan validasi value
-                for header, desc in SECURITY_HEADERS.items():
-                    # Case Insensitive check
+                for header in SECURITY_HEADERS:
                     header_found = False
                     header_value = None
 
@@ -100,11 +92,9 @@ def check_security_headers(targets):
                     if not header_found:
                         missing_list.append(header)
                     else:
-                        # Validasi header value tidak kosong
                         if header_value and header_value.strip():
                             found_count += 1
                         else:
-                            # Header ada tapi value kosong = bahaya
                             missing_list.append(f"{header} (Empty Value)")
 
                 scan_data["Score"] = f"{found_count}/{len(SECURITY_HEADERS)}"
@@ -131,22 +121,35 @@ def check_security_headers(targets):
             except Exception as e:
                 last_error = ("ERROR", f"Unexpected: {str(e)[:100]}", candidate)
                 continue
+    finally:
+        session.close()
 
-        if request_succeeded:
-            results.append(scan_data)
-            continue
+    if request_succeeded:
+        return scan_data
 
-        if last_error:
-            scan_data["URL"] = last_error[2]
-            scan_data["Status"] = last_error[0]
-            scan_data["Error"] = last_error[1]
-            scan_data["Score"] = f"0/{len(SECURITY_HEADERS)}"
-        else:
-            scan_data["Status"] = "ERROR"
-            scan_data["Error"] = "Unknown request error"
-            scan_data["Score"] = f"0/{len(SECURITY_HEADERS)}"
-        
-        results.append(scan_data)
-    
-    session.close()
+    if last_error:
+        scan_data["URL"] = last_error[2]
+        scan_data["Status"] = last_error[0]
+        scan_data["Error"] = last_error[1]
+        scan_data["Score"] = f"0/{len(SECURITY_HEADERS)}"
+    else:
+        scan_data["Status"] = "ERROR"
+        scan_data["Error"] = "Unknown request error"
+        scan_data["Score"] = f"0/{len(SECURITY_HEADERS)}"
+
+    return scan_data
+
+
+def check_security_headers(targets, max_threads=20):
+    valid_targets = [t for t in targets if t and t.strip()]
+    results = [None] * len(valid_targets)
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_threads) as executor:
+        futures = {
+            executor.submit(_check_single_target, target): index
+            for index, target in enumerate(valid_targets)
+        }
+        for future in concurrent.futures.as_completed(futures):
+            results[futures[future]] = future.result()
+
     return results

@@ -114,35 +114,21 @@ class ScanSummaryResponse:
     def from_job(cls, job: ScanJob) -> "ScanSummaryResponse":
         by_module: list[ModuleSummary] = []
         totals = {"items": 0, "secure": 0, "warning": 0, "insecure": 0, "error": 0}
-        domain_status: dict[str, ResultStatus] = {}
-
-        for target in job.targets:
-            domain = normalize_target_domain(target)
-            if domain:
-                domain_status.setdefault(domain, ResultStatus.INFO)
 
         for module_name in job.modules:
-            items = job.results.get(module_name, [])
-            summary = ModuleSummary(module=module_name, count=len(items))
-
-            for item in items:
-                if item.status == ResultStatus.SECURE:
-                    summary.secure += 1
-                elif item.status == ResultStatus.WARNING:
-                    summary.warning += 1
-                elif item.status == ResultStatus.INSECURE:
-                    summary.insecure += 1
-                elif item.status == ResultStatus.ERROR:
-                    summary.error += 1
-
-                domain = normalize_target_domain(item.target)
-                if domain:
-                    current_status = domain_status.get(domain, ResultStatus.INFO)
-                    domain_status[domain] = merge_domain_status(current_status, item.status)
-
+            c = job.counts.get(module_name, {"secure": 0, "warning": 0, "insecure": 0, "error": 0, "info": 0})
+            total_count = sum(c.values())
+            summary = ModuleSummary(
+                module=module_name,
+                count=total_count,
+                secure=c.get("secure", 0),
+                warning=c.get("warning", 0),
+                insecure=c.get("insecure", 0),
+                error=c.get("error", 0),
+            )
             by_module.append(summary)
 
-        for status in domain_status.values():
+        for status in job.domain_worst.values():
             effective_status = ResultStatus.ERROR if status == ResultStatus.INFO else status
             totals["items"] += 1
             if effective_status == ResultStatus.SECURE:

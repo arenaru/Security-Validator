@@ -3,15 +3,16 @@ from __future__ import annotations
 import concurrent.futures
 from dataclasses import dataclass
 from io import BytesIO
-from pathlib import Path
-from tempfile import NamedTemporaryFile
 
 import pandas as pd
 
-from backend.models.scan_models import ModuleError, ModuleResult, ScanJob, ScanJobStatus, ScanOptions, utc_now
-from backend.schemas.scan_schemas import ScanCreateRequest, ScanStatusResponse, ScanSummaryResponse
+from backend.models.scan_models import ModuleError, ModuleResult, ResultStatus, ScanJob, ScanJobStatus, ScanOptions, TRUE_POSITIVE_STATUSES, utc_now
+from backend.schemas.scan_schemas import ScanCreateRequest, ScanStatusResponse, ScanSummaryResponse, merge_domain_status, normalize_target_domain
 from backend.utils.scanner_engine import iter_scanning_engine_results
 from backend.utils.target_resolver import UnsafeTargetError, resolve_targets, validate_target_safety
+
+
+_STORE_TTL_SECONDS = 4 * 3600  # 4 hours
 
 
 class InMemoryScanStore:
@@ -20,10 +21,21 @@ class InMemoryScanStore:
 	def __init__(self) -> None:
 		self._jobs: dict[str, ScanJob] = {}
 
+	def _evict_expired(self, ttl_seconds: int = _STORE_TTL_SECONDS) -> None:
+		cutoff = utc_now().timestamp() - ttl_seconds
+		expired = [
+			scan_id for scan_id, job in self._jobs.items()
+			if job.updated_at.timestamp() < cutoff
+		]
+		for scan_id in expired:
+			del self._jobs[scan_id]
+
 	def save(self, job: ScanJob) -> None:
+		self._evict_expired()
 		self._jobs[job.scan_id] = job
 
 	def get(self, scan_id: str) -> ScanJob | None:
+		self._evict_expired()
 		return self._jobs.get(scan_id)
 
 
@@ -83,31 +95,32 @@ class ScanService:
 		job.touch()
 		self.store.save(job)
 
-		temp_path: str | None = None
-
 		try:
 			resolved_targets = resolve_targets(job.targets, max_threads=max(1, job.options.parallelism))
-
-			with NamedTemporaryFile(mode="w", suffix="_targets.txt", delete=False, encoding="utf-8") as temp_file:
-				temp_file.write("\n".join(resolved_targets))
-				temp_path = temp_file.name
 
 			for module_name, payload, err in iter_scanning_engine_results(
 				resolved_targets,
 				job.modules,
-				temp_path,
 				timeout=job.options.timeout_seconds,
+				parallelism=max(1, job.options.parallelism),
 			):
 				if err is not None:
 					job.results[module_name] = []
+					job.counts[module_name] = {"secure": 0, "warning": 0, "insecure": 0, "error": 1, "info": 0}
 					job.errors.append(ModuleError(module=module_name, message=str(err)[:200]))
 					job.touch()
 					self.store.save(job)
 					continue
 
-				normalized, module_errors = self._normalize_module_output(module_name, payload)
+				normalized, module_errors, module_counts = self._normalize_module_output(module_name, payload)
 				job.results[module_name] = normalized
+				job.counts[module_name] = module_counts
 				job.errors.extend(module_errors)
+				for item in normalized:
+					domain = normalize_target_domain(item.target)
+					if domain:
+						current = job.domain_worst.get(domain, ResultStatus.INFO)
+						job.domain_worst[domain] = merge_domain_status(current, item.status)
 				job.touch()
 				self.store.save(job)
 
@@ -125,11 +138,6 @@ class ScanService:
 			job.finished_at = utc_now()
 			job.touch()
 			self.store.save(job)
-			try:
-				if temp_path:
-					Path(temp_path).unlink(missing_ok=True)
-			except Exception:
-				pass
 
 		return job
 
@@ -183,36 +191,37 @@ class ScanService:
 		self,
 		module_name: str,
 		payload: object,
-	) -> tuple[list[ModuleResult], list[ModuleError]]:
-		results: list[ModuleResult] = []
+	) -> tuple[list[ModuleResult], list[ModuleError], dict[str, int]]:
+		all_results: list[ModuleResult] = []
 		errors: list[ModuleError] = []
 
 		if payload is None:
 			errors.append(ModuleError(module=module_name, message="module returned no payload"))
-			return results, errors
+			return [], errors, {"secure": 0, "warning": 0, "insecure": 0, "error": 0, "info": 0}
 
 		if module_name == "HSTS Security Check" and isinstance(payload, tuple) and len(payload) == 2:
-			parsed_rows = self._flatten_hsts_tuple(payload)
-			for row in parsed_rows:
-				results.append(ModuleResult.from_legacy(module_name, row))
-			return results, errors
+			for row in self._flatten_hsts_tuple(payload):
+				all_results.append(ModuleResult.from_legacy(module_name, row))
 
-		if isinstance(payload, list):
+		elif isinstance(payload, list):
 			for item in payload:
 				if isinstance(item, dict):
-					results.append(ModuleResult.from_legacy(module_name, item))
+					all_results.append(ModuleResult.from_legacy(module_name, item))
 				else:
-					errors.append(
-						ModuleError(module=module_name, message="unsupported list item", target=str(item))
-					)
-			return results, errors
+					errors.append(ModuleError(module=module_name, message="unsupported list item", target=str(item)))
 
-		if isinstance(payload, dict):
-			results.append(ModuleResult.from_legacy(module_name, payload))
-			return results, errors
+		elif isinstance(payload, dict):
+			all_results.append(ModuleResult.from_legacy(module_name, payload))
 
-		errors.append(ModuleError(module=module_name, message="unsupported payload type", target=str(type(payload))))
-		return results, errors
+		else:
+			errors.append(ModuleError(module=module_name, message="unsupported payload type", target=str(type(payload))))
+
+		counts = {"secure": 0, "warning": 0, "insecure": 0, "error": 0, "info": 0}
+		for r in all_results:
+			counts[r.status.value] = counts.get(r.status.value, 0) + 1
+
+		filtered = [r for r in all_results if r.status in TRUE_POSITIVE_STATUSES]
+		return filtered, errors, counts
 
 	def _flatten_hsts_tuple(self, payload: tuple[object, object]) -> list[dict[str, object]]:
 		secure_list, failed_list = payload

@@ -23,7 +23,7 @@ def test_run_scan_enforces_job_deadline(monkeypatch):
 
     release = threading.Event()
 
-    def hanging_module(targets):
+    def hanging_module(targets, max_threads=20):
         release.wait(30)
         return []
 
@@ -53,8 +53,8 @@ def test_run_scan_enforces_job_deadline(monkeypatch):
 def test_run_scan_completes_when_module_is_fast(monkeypatch):
     patch_target_pipeline(monkeypatch)
 
-    def fast_module(targets):
-        return [{"URL": "https://example.com", "Status": "SECURE", "Detail": "ok"}]
+    def fast_module(targets, max_threads=20):
+        return [{"URL": "https://example.com", "Status": "INSECURE", "Detail": "missing header"}]
 
     monkeypatch.setattr(scanner_engine, "check_security_headers", fast_module)
 
@@ -71,4 +71,4 @@ def test_run_scan_completes_when_module_is_fast(monkeypatch):
     assert finished.errors == []
     module_results = finished.results["Security Headers Check"]
     assert len(module_results) == 1
-    assert module_results[0].status.value == "secure"
+    assert module_results[0].status.value == "insecure"

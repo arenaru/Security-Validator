@@ -42,6 +42,9 @@ class ResultStatus(str, Enum):
     INFO = "info"
 
 
+TRUE_POSITIVE_STATUSES: frozenset = frozenset({ResultStatus.WARNING, ResultStatus.INSECURE})
+
+
 class Severity(str, Enum):
     INFO = "info"
     LOW = "low"
@@ -148,6 +151,8 @@ class ScanJob:
     finished_at: datetime | None = None
     results: dict[str, list[ModuleResult]] = field(default_factory=dict)
     errors: list[ModuleError] = field(default_factory=list)
+    counts: dict[str, dict[str, int]] = field(default_factory=dict)
+    domain_worst: dict[str, Any] = field(default_factory=dict)
 
     def progress(self) -> Progress:
         completed = len(self.results)

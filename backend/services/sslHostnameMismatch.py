@@ -1,5 +1,6 @@
 import socket
 import ssl
+import concurrent.futures
 from urllib.parse import urlparse
 
 
@@ -75,14 +76,16 @@ def check_ssl_hostname_mismatch(domain, port=443):
     return result
 
 
-def run_ssl_hostname_mismatch_scan(list_file_path):
-    output_data = []
-    try:
-        with open(list_file_path, "r") as f:
-            domains = [sanitize(line) for line in f if line.strip()]
-            for domain in domains:
-                output_data.append(check_ssl_hostname_mismatch(domain))
-    except Exception as e:
-        print(f"Error reading file: {e}")
+def run_ssl_hostname_mismatch_scan(targets: list[str], max_threads: int = 20) -> list[dict]:
+    valid = [sanitize(t) for t in targets if t and t.strip()]
+    results = [None] * len(valid)
 
-    return output_data
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_threads) as executor:
+        futures = {
+            executor.submit(check_ssl_hostname_mismatch, domain): index
+            for index, domain in enumerate(valid)
+        }
+        for future in concurrent.futures.as_completed(futures):
+            results[futures[future]] = future.result()
+
+    return [r for r in results if r is not None]

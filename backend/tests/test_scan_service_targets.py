@@ -87,9 +87,9 @@ def test_run_scan_passes_resolved_targets_to_modules(monkeypatch):
 
     captured = {}
 
-    def capture_module(targets):
+    def capture_module(targets, max_threads=20):
         captured["targets"] = targets
-        return [{"URL": "https://example.com", "Status": "SECURE", "Detail": "ok"}]
+        return [{"URL": "https://example.com", "Status": "INSECURE", "Detail": "missing header"}]
 
     monkeypatch.setattr(scanner_engine, "check_security_headers", capture_module)
 
@@ -107,8 +107,8 @@ def test_run_scan_keeps_original_target_when_unreachable(monkeypatch):
     monkeypatch.setattr(target_resolver.socket, "getaddrinfo", fake_getaddrinfo(["93.184.216.34"]))
     monkeypatch.setattr(scan_service_module, "resolve_targets", lambda targets, **kwargs: list(targets))
 
-    def fast_module(targets):
-        return [{"URL": targets[0], "Status": "SECURE", "Detail": "ok"}]
+    def fast_module(targets, max_threads=20):
+        return [{"URL": targets[0], "Status": "INSECURE", "Detail": "missing header"}]
 
     monkeypatch.setattr(scanner_engine, "check_security_headers", fast_module)
 

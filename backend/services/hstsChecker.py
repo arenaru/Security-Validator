@@ -15,7 +15,7 @@ THREADS = 20  # Fast scanning
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"
 
 
-def run_hsts_scan(targets):
+def run_hsts_scan(targets, max_threads=20):
     """
     Fungsi utama untuk scanning HSTS yang dipanggil oleh scanner_engine.py.
     Mengembalikan tuple (list_aman, list_vuln).
@@ -73,7 +73,7 @@ def run_hsts_scan(targets):
         return False, last_error if last_error else f"{url.strip()} | ERROR | Unknown Error"
 
     # --- EKSEKUSI PARALLEL ---
-    with concurrent.futures.ThreadPoolExecutor(max_workers=THREADS) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_threads) as executor:
         # Submit task
         futures = {executor.submit(scan_single, url): url for url in targets}
         

@@ -75,7 +75,7 @@ def test_run_scan_truncates_long_module_errors(monkeypatch):
     monkeypatch.setattr(scan_service_module, "validate_target_safety", lambda *args, **kwargs: None)
     monkeypatch.setattr(scan_service_module, "resolve_targets", lambda targets, **kwargs: list(targets))
 
-    def exploding_module(targets):
+    def exploding_module(targets, max_threads=20):
         raise RuntimeError("boom" * 300)
 
     monkeypatch.setattr(scanner_engine, "check_security_headers", exploding_module)
