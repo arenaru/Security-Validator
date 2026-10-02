@@ -127,8 +127,13 @@ def build_target_candidates(target: str) -> list[str]:
 
 def resolve_reachable_target(target: str, timeout: tuple[float, float] = PROBE_TIMEOUT) -> str:
     """
-    Probe a target once and return the first candidate that answers with any
-    HTTP response. Falls back to the original target when nothing answers.
+    Probe a target and return the first candidate that answers with any HTTP
+    response. Falls back to the original target when nothing answers.
+
+    A TLS failure on the HTTPS candidate does NOT downgrade to HTTP: port 443
+    answered, so an HTTPS service exists and is simply misconfigured. Returning
+    the HTTP URL here would hide the TLS defect and make every downstream
+    module (HSTS, Cookie Secure, ...) report the target as plain-HTTP insecure.
     """
     candidates = build_target_candidates(target)
     for candidate in candidates:
@@ -142,6 +147,9 @@ def resolve_reachable_target(target: str, timeout: tuple[float, float] = PROBE_T
                 headers=PROBE_HEADERS,
             )
             response.close()
+            return candidate
+        except requests.exceptions.SSLError:
+            # TLS is broken but present — keep HTTPS, do not try HTTP.
             return candidate
         except requests.exceptions.RequestException:
             continue

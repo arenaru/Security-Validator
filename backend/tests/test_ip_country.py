@@ -53,7 +53,7 @@ def test_resolves_hostname_to_ip(monkeypatch):
 
     assert len(results) == 1
     assert results[0]["IP"] == "93.184.216.34"
-    assert results[0]["Status"] == "WARNING"
+    assert results[0]["Status"] == "INFO"
 
 
 # ---------------------------------------------------------------------------
@@ -122,7 +122,7 @@ def test_shared_ip_sends_one_query_to_api(monkeypatch):
     assert len(batch_calls[0]) == 1
     assert batch_calls[0][0]["query"] == "5.5.5.5"
     assert all(r["IP"] == "5.5.5.5" for r in results)
-    assert all(r["Status"] == "WARNING" for r in results)
+    assert all(r["Status"] == "INFO" for r in results)
 
 
 # ---------------------------------------------------------------------------
@@ -189,7 +189,7 @@ def test_partial_batch_failure(monkeypatch):
     good = next(r for r in results if r["URL"] == "good.example.com")
     bad = next(r for r in results if r["URL"] == "bad.example.com")
 
-    assert good["Status"] == "WARNING"
+    assert good["Status"] == "INFO"
     assert good["Country"] == "Australia"
     assert bad["Status"] == "ERROR"
     assert "reserved range" in bad["Detail"]

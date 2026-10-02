@@ -6,6 +6,36 @@ import type {
   ScanSummaryResponse,
 } from '../types'
 
+/**
+ * Unwraps the API error envelope so callers surface the server's reason
+ * instead of axios' generic "Request failed with status code 400".
+ * Backend shape: { detail: { error: { code, message, trace_id } } }
+ */
+function apiErrorMessage(err: unknown, fallback: string): string {
+  if (axios.isAxiosError(err)) {
+    const detail = err.response?.data?.detail
+    const message = detail?.error?.message ?? detail?.message
+    if (typeof message === 'string' && message) return message
+    if (typeof detail === 'string' && detail) return detail
+  }
+  return err instanceof Error && err.message ? err.message : fallback
+}
+
+export class ApiError extends Error {
+  readonly status?: number
+
+  constructor(message: string, status?: number) {
+    super(message)
+    this.name = 'ApiError'
+    this.status = status
+  }
+}
+
+function toApiError(err: unknown, fallback: string): ApiError {
+  const status = axios.isAxiosError(err) ? err.response?.status : undefined
+  return new ApiError(apiErrorMessage(err, fallback), status)
+}
+
 const API_BASE = '/api'
 
 const client = axios.create({
@@ -107,28 +137,44 @@ function normalizeSummaryResponse(data: ApiScanSummaryResponse): ScanSummaryResp
 export const scanApi = {
   // Create a new scan
   async createScan(request: ScanCreateRequest): Promise<ScanAcceptedResponse> {
-    const { data } = await client.post<ApiScanAcceptedResponse>('/scans', request)
-    return normalizeAcceptedResponse(data)
+    try {
+      const { data } = await client.post<ApiScanAcceptedResponse>('/scans', request)
+      return normalizeAcceptedResponse(data)
+    } catch (err) {
+      throw toApiError(err, 'Gagal memulai proses scan.')
+    }
   },
 
   // Get scan status and results
   async getScanStatus(scanId: string): Promise<ScanStatusResponse> {
-    const { data } = await client.get<ApiScanStatusResponse>(`/scans/${scanId}`)
-    return normalizeStatusResponse(data)
+    try {
+      const { data } = await client.get<ApiScanStatusResponse>(`/scans/${scanId}`)
+      return normalizeStatusResponse(data)
+    } catch (err) {
+      throw toApiError(err, 'Gagal mengambil status scan.')
+    }
   },
 
   // Get scan summary
   async getScanSummary(scanId: string): Promise<ScanSummaryResponse> {
-    const { data } = await client.get<ApiScanSummaryResponse>(`/scans/${scanId}/summary`)
-    return normalizeSummaryResponse(data)
+    try {
+      const { data } = await client.get<ApiScanSummaryResponse>(`/scans/${scanId}/summary`)
+      return normalizeSummaryResponse(data)
+    } catch (err) {
+      throw toApiError(err, 'Gagal mengambil ringkasan scan.')
+    }
   },
 
   // Download XLSX report
   async downloadReport(scanId: string): Promise<Blob> {
-    const { data } = await client.get(`/scans/${scanId}/report.xlsx`, {
-      responseType: 'blob',
-    })
-    return data
+    try {
+      const { data } = await client.get(`/scans/${scanId}/report.xlsx`, {
+        responseType: 'blob',
+      })
+      return data
+    } catch (err) {
+      throw toApiError(err, 'Gagal mengunduh laporan.')
+    }
   },
 
   // Health check

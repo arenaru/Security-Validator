@@ -6,7 +6,7 @@ from io import BytesIO
 
 import pandas as pd
 
-from backend.models.scan_models import ModuleError, ModuleResult, ResultStatus, ScanJob, ScanJobStatus, ScanOptions, SkippedTarget, TRUE_POSITIVE_STATUSES, utc_now
+from backend.models.scan_models import INFORMATIONAL_MODULES, ModuleError, ModuleResult, ResultStatus, ScanJob, ScanJobStatus, ScanOptions, SkippedTarget, TRUE_POSITIVE_STATUSES, utc_now
 from backend.schemas.scan_schemas import ScanCreateRequest, ScanStatusResponse, ScanSummaryResponse, merge_domain_status, normalize_target_domain
 from backend.utils.scanner_engine import iter_scanning_engine_results
 from backend.utils.target_resolver import UnsafeTargetError, resolve_targets, validate_target_safety
@@ -126,11 +126,12 @@ class ScanService:
 				job.results[module_name] = normalized
 				job.counts[module_name] = module_counts
 				job.errors.extend(module_errors)
-				for item in normalized:
-					domain = normalize_target_domain(item.target)
-					if domain:
-						current = job.domain_worst.get(domain, ResultStatus.INFO)
-						job.domain_worst[domain] = merge_domain_status(current, item.status)
+				if module_name not in INFORMATIONAL_MODULES:
+					for item in normalized:
+						domain = normalize_target_domain(item.target)
+						if domain:
+							current = job.domain_worst.get(domain, ResultStatus.INFO)
+							job.domain_worst[domain] = merge_domain_status(current, item.status)
 				job.touch()
 				self.store.save(job)
 
@@ -229,6 +230,9 @@ class ScanService:
 		counts = {"secure": 0, "warning": 0, "insecure": 0, "error": 0, "info": 0}
 		for r in all_results:
 			counts[r.status.value] = counts.get(r.status.value, 0) + 1
+
+		if module_name in INFORMATIONAL_MODULES:
+			return all_results, errors, counts
 
 		filtered = [r for r in all_results if r.status in TRUE_POSITIVE_STATUSES]
 		return filtered, errors, counts

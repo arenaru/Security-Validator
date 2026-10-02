@@ -162,3 +162,24 @@ def test_resolve_reachable_target_returns_original_when_unreachable(monkeypatch)
     monkeypatch.setattr(target_resolver.requests, "get", fake_get)
 
     assert resolve_reachable_target("example.com") == "example.com"
+
+
+def test_resolve_reachable_target_keeps_https_on_tls_error(monkeypatch):
+    """
+    A TLS failure means port 443 answered, so the HTTPS URL must be kept.
+    Downgrading to http:// here would make every downstream module (HSTS,
+    Cookie Secure, ...) scan plain HTTP and report cascading false positives.
+    SSLError subclasses ConnectionError, so this guards clause ordering too.
+    """
+    calls = []
+
+    def fake_get(url, **kwargs):
+        calls.append(url)
+        if url.startswith("https://"):
+            raise requests.exceptions.SSLError("certificate has expired")
+        return FakeResponse()
+
+    monkeypatch.setattr(target_resolver.requests, "get", fake_get)
+
+    assert resolve_reachable_target("example.com") == "https://example.com"
+    assert calls == ["https://example.com"]

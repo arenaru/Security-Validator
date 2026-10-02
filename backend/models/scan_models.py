@@ -24,7 +24,7 @@ MODULE_NAMES: tuple[str, ...] = (
     "IP Country Lookup",
 )
 
-MAX_TARGETS_PER_SCAN = 100
+MAX_TARGETS_PER_SCAN = 200
 
 
 class ScanJobStatus(str, Enum):
@@ -45,6 +45,15 @@ class ResultStatus(str, Enum):
 
 TRUE_POSITIVE_STATUSES: frozenset = frozenset({ResultStatus.WARNING, ResultStatus.INSECURE})
 
+# Modules that report reconnaissance data rather than vulnerabilities. Their
+# rows bypass the true-positive filter (so every scanned target stays visible
+# in the report) and are excluded from domain_worst aggregation (so a healthy
+# HTTP 200 or a country lookup cannot degrade a domain's overall verdict).
+INFORMATIONAL_MODULES: frozenset = frozenset({
+    "Response Code Check",
+    "IP Country Lookup",
+})
+
 
 class Severity(str, Enum):
     INFO = "info"
@@ -63,7 +72,7 @@ def normalize_result_status(raw_status: str | None) -> ResultStatus:
 
     if value in {"valid", "safe", "secure", "ok"}:
         return ResultStatus.SECURE
-    if value in {"warning", "warn", "expired", "invalid_status", "not found"}:
+    if value in {"warning", "warn", "expired", "invalid_status", "not found", "tls_error"}:
         return ResultStatus.WARNING
     if value in {"insecure", "vulnerable", "critical"}:
         return ResultStatus.INSECURE

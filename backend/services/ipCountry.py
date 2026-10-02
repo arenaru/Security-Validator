@@ -102,8 +102,11 @@ def run_ip_country_scan(targets_list: list[str], max_threads: int = 20) -> list[
             continue
 
         results.append({
+            # Geolocation data is reconnaissance, not a finding. "IP Country
+            # Lookup" is in INFORMATIONAL_MODULES, so INFO rows still survive
+            # the true-positive filter and stay visible in the report.
             "URL": target,
-            "Status": "WARNING",
+            "Status": "INFO",
             "Detail": api_data.get("country", "-"),
             "IP": ip,
             "Country": api_data.get("country", "-"),
