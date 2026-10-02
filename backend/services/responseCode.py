@@ -25,7 +25,7 @@ def _classify_status(status_code):
 def check_response_code(target):
     candidates = build_target_candidates(target)
     headers = {'User-Agent': USER_AGENT}
-    last_error = None
+    candidate_errors = []
 
     for candidate in candidates:
         try:
@@ -39,32 +39,66 @@ def check_response_code(target):
 
             status_code = response.status_code
             reason = response.reason or ""
+            message = f"HTTP {status_code} {reason}".strip()
 
-            return {
+            result = {
                 "URL": candidate,
                 "Status Code": status_code,
                 "Reason": reason,
                 "Category": _classify_status(status_code),
-                "Message": f"HTTP {status_code} {reason}".strip(),
+                "Message": message,
+                "Fallback Used": False,
+                # Forced to WARNING (not SECURE/INFO) so this result survives the
+                # true-positive filter in scan_service._normalize_module_output and
+                # always appears in the report — Response Code Check is informational
+                # and every scanned target should be visible, not just vulnerabilities.
+                "Status": "WARNING",
             }
 
+            if candidate_errors:
+                failed = candidate_errors[-1]
+                note = (
+                    f"{failed['url']} unreachable ({failed['message']}) "
+                    f"before falling back to {candidate}"
+                )
+                result["Fallback Used"] = True
+                result["Fallback Note"] = note
+                result["Message"] = f"{message} (fallback — {note})"
+
+            return result
+
         except requests.exceptions.Timeout:
-            last_error = (candidate, "TIMEOUT", "Connection Timeout")
+            candidate_errors.append({
+                "url": candidate,
+                "error_type": "TIMEOUT",
+                "message": "Connection Timeout",
+            })
             continue
         except requests.exceptions.ConnectionError:
-            last_error = (candidate, "CONNECTION_ERROR", "Connection Refused")
+            candidate_errors.append({
+                "url": candidate,
+                "error_type": "CONNECTION_ERROR",
+                "message": "Connection Refused",
+            })
             continue
         except Exception as e:
-            last_error = (candidate, "ERROR", f"Error: {str(e)[:100]}")
+            candidate_errors.append({
+                "url": candidate,
+                "error_type": "ERROR",
+                "message": f"Error: {str(e)[:100]}",
+            })
             continue
 
-    if last_error:
+    if candidate_errors:
+        last_error = candidate_errors[-1]
         return {
-            "URL": last_error[0],
+            "URL": last_error["url"],
             "Status Code": "N/A",
-            "Reason": last_error[1],
+            "Reason": last_error["error_type"],
             "Category": "ERROR",
-            "Message": last_error[2],
+            "Message": last_error["message"],
+            "Fallback Used": False,
+            "Status": "WARNING",
         }
 
     return {
@@ -73,6 +107,8 @@ def check_response_code(target):
         "Reason": "UNKNOWN",
         "Category": "ERROR",
         "Message": "Unknown Error",
+        "Fallback Used": False,
+        "Status": "WARNING",
     }
 
 
