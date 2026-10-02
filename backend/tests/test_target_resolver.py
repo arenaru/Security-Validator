@@ -183,3 +183,183 @@ def test_resolve_reachable_target_keeps_https_on_tls_error(monkeypatch):
 
     assert resolve_reachable_target("example.com") == "https://example.com"
     assert calls == ["https://example.com"]
+
+
+# ---------------------------------------------------------------------------
+# TCP pre-flight
+# ---------------------------------------------------------------------------
+
+
+class FakeSocket:
+    """Minimal socket stub driven by a {port: outcome} map."""
+
+    def __init__(self, outcomes):
+        self._outcomes = outcomes
+        self.timeout = None
+        self.closed = False
+
+    def settimeout(self, timeout):
+        self.timeout = timeout
+
+    def connect(self, address):
+        outcome = self._outcomes.get(address[1], "timeout")
+        if outcome == "open":
+            return None
+        if outcome == "refused":
+            raise ConnectionRefusedError("connection refused")
+        raise target_resolver.socket.timeout("timed out")
+
+    def close(self):
+        self.closed = True
+
+
+def patch_sockets(monkeypatch, outcomes):
+    """Patch socket.socket so probes resolve from the given {port: outcome} map."""
+    created = []
+
+    def factory(*args, **kwargs):
+        sock = FakeSocket(outcomes)
+        created.append(sock)
+        return sock
+
+    monkeypatch.setattr(target_resolver.socket, "socket", factory)
+    return created
+
+
+def test_probe_host_ports_records_open_ports_and_latency(monkeypatch):
+    patch_sockets(monkeypatch, {443: "open", 80: "open"})
+
+    probe = target_resolver.probe_host_ports("example.com")
+
+    assert probe.is_reachable is True
+    assert probe.open_ports == (443, 80)
+    assert probe.latency_ms is not None
+    assert probe.error is None
+
+
+def test_probe_host_ports_reports_dropped_packets(monkeypatch):
+    patch_sockets(monkeypatch, {})
+
+    probe = target_resolver.probe_host_ports("blackhole.example.com")
+
+    assert probe.is_reachable is False
+    assert probe.open_ports == ()
+    assert probe.latency_ms is None
+    assert "dropped" in probe.error
+
+
+def test_probe_host_ports_closes_every_socket(monkeypatch):
+    created = patch_sockets(monkeypatch, {443: "open", 80: "refused"})
+
+    target_resolver.probe_host_ports("example.com")
+
+    assert created and all(sock.closed for sock in created)
+
+
+def test_probe_host_ports_slow_but_live_host_stays_reachable(monkeypatch):
+    """
+    Latency is diagnostic only. A slow host that still completes the connect is
+    a real host, so gating on milliseconds would turn it into a false negative.
+    """
+    patch_sockets(monkeypatch, {443: "open"})
+
+    ticks = iter([0.0, 4.0])
+    monkeypatch.setattr(target_resolver.time, "perf_counter", lambda: next(ticks))
+
+    probe = target_resolver.probe_host_ports("slow.example.com", ports=(443,))
+
+    assert probe.is_reachable is True
+    assert probe.latency_ms == 4000.0
+
+
+def test_probe_targets_dedupes_hosts(monkeypatch):
+    probed = []
+
+    def fake_probe(host, ports=None, timeout=None):
+        probed.append(host)
+        return target_resolver.PortProbe(host=host, open_ports=(443,), latency_ms=1.0)
+
+    monkeypatch.setattr(target_resolver, "probe_host_ports", fake_probe)
+
+    probes = target_resolver.probe_targets(
+        ["example.com", "https://example.com/path", "other.example.com"]
+    )
+
+    assert sorted(probed) == ["example.com", "other.example.com"]
+    assert probes["example.com"].is_reachable is True
+    assert probes["https://example.com/path"].is_reachable is True
+
+
+def test_candidates_for_probe_narrows_to_open_ports():
+    https_only = target_resolver.PortProbe(host="example.com", open_ports=(443,))
+    http_only = target_resolver.PortProbe(host="example.com", open_ports=(80,))
+    closed = target_resolver.PortProbe(host="example.com", open_ports=())
+
+    assert target_resolver.candidates_for_probe("example.com", https_only) == [
+        "https://example.com"
+    ]
+    assert target_resolver.candidates_for_probe("example.com", http_only) == [
+        "http://example.com"
+    ]
+    assert target_resolver.candidates_for_probe("example.com", closed) == []
+
+
+def test_resolve_reachable_target_skips_closed_scheme(monkeypatch):
+    """Only port 80 answered, so no HTTP request should be spent on HTTPS."""
+    calls = []
+
+    def fake_get(url, **kwargs):
+        calls.append(url)
+        return FakeResponse()
+
+    monkeypatch.setattr(target_resolver.requests, "get", fake_get)
+    probe = target_resolver.PortProbe(host="example.com", open_ports=(80,))
+
+    assert resolve_reachable_target("example.com", probe=probe) == "http://example.com"
+    assert calls == ["http://example.com"]
+
+
+def test_resolve_reachable_target_makes_no_request_when_all_ports_closed(monkeypatch):
+    calls = []
+
+    def fake_get(url, **kwargs):
+        calls.append(url)
+        return FakeResponse()
+
+    monkeypatch.setattr(target_resolver.requests, "get", fake_get)
+    probe = target_resolver.PortProbe(host="example.com", open_ports=())
+
+    assert resolve_reachable_target("example.com", probe=probe) == "example.com"
+    assert calls == []
+
+
+def test_partition_by_reachability_splits_and_explains():
+    probes = {
+        "live.example.com": target_resolver.PortProbe(
+            host="live.example.com", open_ports=(443,), latency_ms=12.3
+        ),
+        "dead.example.com": target_resolver.PortProbe(
+            host="dead.example.com",
+            open_ports=(),
+            error="connect timed out after 3s (packets dropped)",
+        ),
+    }
+
+    reachable, unreachable = target_resolver.partition_by_reachability(
+        ["live.example.com", "dead.example.com"], probes
+    )
+
+    assert reachable == ["live.example.com"]
+    assert len(unreachable) == 1
+    target, reason = unreachable[0]
+    assert target == "dead.example.com"
+    assert "unreachable" in reason
+    assert "dropped" in reason
+
+
+def test_partition_by_reachability_keeps_unprobed_targets():
+    """A missing probe must not silently drop a target."""
+    reachable, unreachable = target_resolver.partition_by_reachability(["example.com"], {})
+
+    assert reachable == ["example.com"]
+    assert unreachable == []

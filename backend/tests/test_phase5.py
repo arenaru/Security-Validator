@@ -91,6 +91,9 @@ def _build_service():
 def _patch_pipeline(monkeypatch):
     monkeypatch.setattr(scan_service_module, "validate_target_safety", lambda *a, **k: None)
     monkeypatch.setattr(scan_service_module, "resolve_targets", lambda t, **k: list(t))
+    # Treat every target as reachable: the TCP pre-flight would otherwise make
+    # real connect attempts to the fake *.example.com hosts and skip them all.
+    monkeypatch.setattr(scan_service_module, "probe_targets", lambda t, **k: {})
 
 
 def test_results_filtered_to_true_positives_only(monkeypatch):

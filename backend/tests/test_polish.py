@@ -74,6 +74,9 @@ def test_from_legacy_truncates_long_details():
 def test_run_scan_truncates_long_module_errors(monkeypatch):
     monkeypatch.setattr(scan_service_module, "validate_target_safety", lambda *args, **kwargs: None)
     monkeypatch.setattr(scan_service_module, "resolve_targets", lambda targets, **kwargs: list(targets))
+    # Treat every target as reachable: the TCP pre-flight would otherwise make
+    # real connect attempts to the fake example.com host.
+    monkeypatch.setattr(scan_service_module, "probe_targets", lambda targets, **kwargs: {})
 
     def exploding_module(targets, max_threads=20):
         raise RuntimeError("boom" * 300)

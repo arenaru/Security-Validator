@@ -185,6 +185,9 @@ def test_explicit_scheme_single_candidate_no_fallback(monkeypatch):
 def _patch_pipeline(monkeypatch):
     monkeypatch.setattr("backend.services.scan_service.validate_target_safety", lambda *a, **k: None)
     monkeypatch.setattr("backend.services.scan_service.resolve_targets", lambda t, **k: list(t))
+    # Treat every target as reachable: the TCP pre-flight would otherwise make
+    # real connect attempts to the fake *.example.com hosts and skip them all.
+    monkeypatch.setattr("backend.services.scan_service.probe_targets", lambda t, **k: {})
 
 
 def _mixed_targets(targets, max_threads=20):

@@ -16,6 +16,9 @@ def build_service():
 def patch_target_pipeline(monkeypatch):
     monkeypatch.setattr(scan_service_module, "validate_target_safety", lambda *args, **kwargs: None)
     monkeypatch.setattr(scan_service_module, "resolve_targets", lambda targets, **kwargs: list(targets))
+    # Treat every target as reachable: the TCP pre-flight would otherwise make
+    # real connect attempts to the fake *.example.com hosts and skip them all.
+    monkeypatch.setattr(scan_service_module, "probe_targets", lambda targets, **kwargs: {})
 
 
 def test_run_scan_enforces_job_deadline(monkeypatch):

@@ -9,10 +9,20 @@ import pandas as pd
 from backend.models.scan_models import INFORMATIONAL_MODULES, ModuleError, ModuleResult, ResultStatus, ScanJob, ScanJobStatus, ScanOptions, SkippedTarget, TRUE_POSITIVE_STATUSES, utc_now
 from backend.schemas.scan_schemas import ScanCreateRequest, ScanStatusResponse, ScanSummaryResponse, merge_domain_status, normalize_target_domain
 from backend.utils.scanner_engine import iter_scanning_engine_results
-from backend.utils.target_resolver import UnsafeTargetError, resolve_targets, validate_target_safety
+from backend.utils.target_resolver import (
+	UnsafeTargetError,
+	partition_by_reachability,
+	probe_targets,
+	resolve_targets,
+	validate_target_safety,
+)
 
 
 _STORE_TTL_SECONDS = 4 * 3600  # 4 hours
+
+# TCP connects are cheap (no TLS, no body), so the pre-flight runs far wider
+# than job parallelism, which governs the expensive HTTP modules.
+_PORT_PROBE_THREADS = 50
 
 
 class InMemoryScanStore:
@@ -106,7 +116,30 @@ class ScanService:
 		self.store.save(job)
 
 		try:
-			resolved_targets = resolve_targets(job.targets, max_threads=max(1, job.options.parallelism))
+			# TCP pre-flight before any HTTP work. Hosts that silently drop
+			# packets otherwise cost a full connect timeout per scheme per
+			# module, which is what pushes large subdomain lists (often inflated
+			# by wildcard DNS) past the job deadline. A TCP connect needs no TLS
+			# handshake, so it can run at much higher concurrency than the scan
+			# modules themselves.
+			probes = probe_targets(job.targets, max_threads=_PORT_PROBE_THREADS)
+			reachable, unreachable = partition_by_reachability(job.targets, probes)
+
+			for target, reason in unreachable:
+				job.skipped_targets.append(SkippedTarget(target=target, reason=reason))
+			if unreachable:
+				job.touch()
+				self.store.save(job)
+
+			if not reachable:
+				job.status = ScanJobStatus.DONE
+				return job
+
+			resolved_targets = resolve_targets(
+				reachable,
+				max_threads=max(1, job.options.parallelism),
+				probes=probes,
+			)
 
 			for module_name, payload, err in iter_scanning_engine_results(
 				resolved_targets,
