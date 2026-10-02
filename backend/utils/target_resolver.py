@@ -24,6 +24,10 @@ PROBE_HEADERS = {
 # timeout per scheme per module, which is what pushes large subdomain lists past
 # the job deadline.
 PORT_PROBE_TIMEOUT = 3.0
+# A dropped SYN, transient congestion, or a target rate-limiting a burst of
+# probes all surface as a timeout. Retrying once keeps a live host from being
+# evicted from the entire scan on a single blip; refusals are not retried.
+PORT_PROBE_RETRIES = 1
 HTTPS_PORT = 443
 HTTP_PORT = 80
 
@@ -153,16 +157,43 @@ class PortProbe:
 _SCHEME_PORTS = {"https": HTTPS_PORT, "http": HTTP_PORT}
 
 
+def _connect_once(host: str, port: int, timeout: float) -> tuple[bool, float | None, str | None, bool]:
+    """
+    One TCP connect attempt. Returns (opened, latency_ms, error, retryable).
+
+    A timeout is retryable: a single dropped SYN, transient congestion, or the
+    target rate-limiting a burst of probes all look identical here, and marking
+    the host dead would remove it from every module. A refused/other OSError is
+    deterministic for the port, so it is not retried.
+    """
+    sock = socket.socket()
+    sock.settimeout(timeout)
+    started = time.perf_counter()
+    try:
+        sock.connect((host, port))
+        return True, (time.perf_counter() - started) * 1000, None, False
+    except socket.timeout:
+        return False, None, f"connect timed out after {timeout:.0f}s (no response)", True
+    except OSError as exc:
+        return False, None, f"{type(exc).__name__}: {str(exc)[:60]}", False
+    finally:
+        sock.close()
+
+
 def probe_host_ports(
     host: str,
     ports: tuple[int, ...] = (HTTPS_PORT, HTTP_PORT),
     timeout: float = PORT_PROBE_TIMEOUT,
+    timeout_retries: int = PORT_PROBE_RETRIES,
 ) -> PortProbe:
     """
     TCP-connect to each port and record which answered, plus the fastest
     connect latency. Latency is diagnostic only: a slow-but-live host is still
     a real host, so reachability is decided by connect success, never by how
     many milliseconds it took.
+
+    Timeouts are retried (see _connect_once) so a transient drop does not
+    wrongly evict a live host from the whole scan; refusals are not.
     """
     if not host:
         return PortProbe(host=host, error="empty host")
@@ -172,21 +203,16 @@ def probe_host_ports(
     last_error: str | None = None
 
     for port in ports:
-        sock = socket.socket()
-        sock.settimeout(timeout)
-        started = time.perf_counter()
-        try:
-            sock.connect((host, port))
-            elapsed_ms = (time.perf_counter() - started) * 1000
-            open_ports.append(port)
-            if best_ms is None or elapsed_ms < best_ms:
-                best_ms = elapsed_ms
-        except socket.timeout:
-            last_error = f"connect timed out after {timeout:.0f}s (packets dropped)"
-        except OSError as exc:
-            last_error = f"{type(exc).__name__}: {str(exc)[:60]}"
-        finally:
-            sock.close()
+        for attempt in range(timeout_retries + 1):
+            opened, latency_ms, error, retryable = _connect_once(host, port, timeout)
+            if opened:
+                open_ports.append(port)
+                if best_ms is None or latency_ms < best_ms:
+                    best_ms = latency_ms
+                break
+            last_error = error
+            if not retryable or attempt == timeout_retries:
+                break
 
     return PortProbe(
         host=host,

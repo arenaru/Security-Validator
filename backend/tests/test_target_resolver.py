@@ -237,7 +237,7 @@ def test_probe_host_ports_records_open_ports_and_latency(monkeypatch):
     assert probe.error is None
 
 
-def test_probe_host_ports_reports_dropped_packets(monkeypatch):
+def test_probe_host_ports_reports_timeout(monkeypatch):
     patch_sockets(monkeypatch, {})
 
     probe = target_resolver.probe_host_ports("blackhole.example.com")
@@ -245,7 +245,59 @@ def test_probe_host_ports_reports_dropped_packets(monkeypatch):
     assert probe.is_reachable is False
     assert probe.open_ports == ()
     assert probe.latency_ms is None
-    assert "dropped" in probe.error
+    assert "timed out" in probe.error
+
+
+def test_probe_host_ports_retries_timeout_then_succeeds(monkeypatch):
+    """
+    A transient drop (one lost SYN, congestion, or a rate-limited burst) must
+    not evict a live host from the whole scan. The retry gives it a second
+    chance; a host that genuinely answers on retry stays reachable.
+    """
+    attempts = {443: 0}
+
+    class FlakySocket:
+        def settimeout(self, _):
+            pass
+
+        def connect(self, address):
+            attempts[address[1]] += 1
+            if attempts[address[1]] == 1:
+                raise target_resolver.socket.timeout("first SYN dropped")
+            return None
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(target_resolver.socket, "socket", lambda *a, **k: FlakySocket())
+
+    probe = target_resolver.probe_host_ports("flaky.example.com", ports=(443,))
+
+    assert probe.is_reachable is True
+    assert attempts[443] == 2
+
+
+def test_probe_host_ports_does_not_retry_refusal(monkeypatch):
+    """A refused port is deterministic, so retrying it only wastes time."""
+    attempts = {443: 0}
+
+    class RefusingSocket:
+        def settimeout(self, _):
+            pass
+
+        def connect(self, address):
+            attempts[address[1]] += 1
+            raise ConnectionRefusedError("refused")
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(target_resolver.socket, "socket", lambda *a, **k: RefusingSocket())
+
+    probe = target_resolver.probe_host_ports("closed.example.com", ports=(443,))
+
+    assert probe.is_reachable is False
+    assert attempts[443] == 1
 
 
 def test_probe_host_ports_closes_every_socket(monkeypatch):
@@ -341,7 +393,7 @@ def test_partition_by_reachability_splits_and_explains():
         "dead.example.com": target_resolver.PortProbe(
             host="dead.example.com",
             open_ports=(),
-            error="connect timed out after 3s (packets dropped)",
+            error="connect timed out after 3s (no response)",
         ),
     }
 
@@ -354,7 +406,7 @@ def test_partition_by_reachability_splits_and_explains():
     target, reason = unreachable[0]
     assert target == "dead.example.com"
     assert "unreachable" in reason
-    assert "dropped" in reason
+    assert "timed out" in reason
 
 
 def test_partition_by_reachability_keeps_unprobed_targets():

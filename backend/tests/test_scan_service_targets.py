@@ -137,7 +137,7 @@ def _probe_map(reachable_hosts, targets):
             latency_ms=12.0 if target in reachable_hosts else None,
             error=None
             if target in reachable_hosts
-            else "connect timed out after 3s (packets dropped)",
+            else "connect timed out after 3s (no response)",
         )
         for target in targets
     }
@@ -175,7 +175,7 @@ def test_run_scan_skips_unreachable_targets_before_modules(monkeypatch):
 
     assert captured["targets"] == ["live.example.com"]
     assert [s.target for s in finished.skipped_targets] == ["dead.example.com"]
-    assert "dropped" in finished.skipped_targets[0].reason
+    assert "timed out" in finished.skipped_targets[0].reason
     # The original target list is preserved for reporting.
     assert finished.targets == ["live.example.com", "dead.example.com"]
 
