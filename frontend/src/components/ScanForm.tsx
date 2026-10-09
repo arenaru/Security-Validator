@@ -48,26 +48,37 @@ export function ScanForm({
     .map(t => t.trim())
     .filter(Boolean)
 
+  const detectActivePreset = (modules: string[]): string => {
+    if (modules.length === MODULE_NAMES.length) return 'full'
+    const matchedCategory = MODULE_CATEGORIES.find(
+      cat => modules.length === cat.modules.length && cat.modules.every(m => modules.includes(m))
+    )
+    return matchedCategory ? matchedCategory.id : 'custom'
+  }
+
   const handleApplyPreset = (preset: ScanPreset) => {
     setActivePreset(preset.id)
     setSelectedModules([...preset.modules])
   }
 
   const handleModuleToggle = (module: string) => {
-    setActivePreset('custom')
-    setSelectedModules(prev =>
-      prev.includes(module) ? prev.filter(m => m !== module) : [...prev, module]
-    )
+    setSelectedModules(prev => {
+      const next = prev.includes(module) ? prev.filter(m => m !== module) : [...prev, module]
+      setActivePreset(detectActivePreset(next))
+      return next
+    })
   }
 
   const handleCategoryToggle = (categoryModules: readonly string[]) => {
-    setActivePreset('custom')
     const allSelected = categoryModules.every(m => selectedModules.includes(m))
+    let next: string[]
     if (allSelected) {
-      setSelectedModules(prev => prev.filter(m => !categoryModules.includes(m)))
+      next = selectedModules.filter(m => !categoryModules.includes(m))
     } else {
-      setSelectedModules(prev => Array.from(new Set([...prev, ...categoryModules])))
+      next = Array.from(new Set([...selectedModules, ...categoryModules]))
     }
+    setActivePreset(detectActivePreset(next))
+    setSelectedModules(next)
   }
 
   const handleLoadSample = () => {
@@ -237,7 +248,7 @@ export function ScanForm({
               </span>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
               {SCAN_PRESETS.map((preset) => {
                 const isSelected = activePreset === preset.id
                 return (

@@ -146,48 +146,16 @@ export const SCAN_PRESETS: ScanPreset[] = [
   {
     id: 'full',
     name: 'Full Audit',
-    badge: '14 Modul',
-    description: 'Pemeriksaan keamanan lengkap seluruh 14 modul',
+    badge: `${MODULE_NAMES.length} Modul`,
+    description: 'Pemeriksaan keamanan lengkap seluruh modul',
     modules: [...MODULE_NAMES],
   },
-  {
-    id: 'quick',
-    name: 'Quick Check',
-    badge: '4 Modul',
-    description: 'Audit cepat: SSL, Headers, HSTS, dan Response Code (< 15 detik)',
-    modules: [
-      'SSL Certificate Check',
-      'Security Headers Check',
-      'HSTS Security Check',
-      'Response Code Check',
-    ],
-  },
-  {
-    id: 'ssl',
-    name: 'SSL / TLS Only',
-    badge: '5 Modul',
-    description: 'Fokus sertifikat SSL dan kerentanan protokol enkripsi transport',
-    modules: [
-      'SSL Certificate Check',
-      'SSL Certificate Hostname Mismatch',
-      'SSLv3 Detection',
-      'TLS 1.0 Detection',
-      'TLS 1.1 Detection',
-    ],
-  },
-  {
-    id: 'web',
-    name: 'Web & Framework',
-    badge: '6 Modul',
-    description: 'Audit kerentanan aplikasi web, debug mode bocor, dan proteksi cookies',
-    modules: [
-      'Laravel Debug Mode',
-      'Node.js Debug Mode',
-      'PHP Version Disclosure',
-      'Security Headers Check',
-      'Cookie Secure Flag',
-      'Cookie HttpOnly Flag',
-    ],
-  },
+  ...MODULE_CATEGORIES.map((cat): ScanPreset => ({
+    id: cat.id,
+    name: cat.title,
+    badge: `${cat.modules.length} Modul`,
+    description: cat.description,
+    modules: [...cat.modules],
+  })),
 ]
 
