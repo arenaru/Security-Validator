@@ -3,7 +3,7 @@ from datetime import timedelta
 
 import pytest
 
-from backend.models.scan_models import ScanJob, ScanOptions
+from backend.models.scan_models import ResultStatus, ScanJob, ScanOptions
 from backend.schemas.scan_schemas import ScanCreateRequest
 from backend.services import headerCheck, scan_service as scan_service_module, tlsScanner
 from backend.services.scan_service import InMemoryScanStore, ScanService, _STORE_TTL_SECONDS
@@ -81,7 +81,7 @@ def test_run_tls_scan_calls_check_once_per_target(monkeypatch):
 
 
 # ---------------------------------------------------------------------------
-# Step 3 — filter true-positives + job.counts
+# Step 3 — every target stays visible + domain verdict + job.counts
 # ---------------------------------------------------------------------------
 
 def _build_service():
@@ -96,7 +96,7 @@ def _patch_pipeline(monkeypatch):
     monkeypatch.setattr(scan_service_module, "probe_targets", lambda t, **k: {})
 
 
-def test_results_filtered_to_true_positives_only(monkeypatch):
+def test_every_scanned_target_stays_in_results(monkeypatch):
     _patch_pipeline(monkeypatch)
 
     def mixed_module(targets, max_threads=20):
@@ -121,8 +121,37 @@ def test_results_filtered_to_true_positives_only(monkeypatch):
     module_results = finished.results["Security Headers Check"]
     statuses = {r.status.value for r in module_results}
 
-    assert statuses <= {"warning", "insecure"}
-    assert len(module_results) == 2
+    # No row is dropped: secure/error/info targets are kept alongside findings.
+    assert statuses == {"secure", "insecure", "warning", "error", "info"}
+    assert len(module_results) == 5
+
+
+def test_only_true_positives_drive_domain_verdict(monkeypatch):
+    """
+    Showing every target must not let a secure or errored row change a domain's
+    overall verdict — only warning/insecure findings feed domain_worst.
+    """
+    _patch_pipeline(monkeypatch)
+
+    def mixed_module(targets, max_threads=20):
+        return [
+            {"URL": "https://secure.example.com", "Status": "SECURE", "Detail": "ok"},
+            {"URL": "https://err.example.com",    "Status": "ERROR",  "Detail": "timeout"},
+            {"URL": "https://vuln.example.com",   "Status": "INSECURE", "Detail": "vuln"},
+        ]
+
+    monkeypatch.setattr(scanner_engine, "check_security_headers", mixed_module)
+
+    service = _build_service()
+    request = ScanCreateRequest(
+        targets=["secure.example.com", "err.example.com", "vuln.example.com"],
+        modules=["Security Headers Check"],
+    )
+    job = service.create_job(request)
+    finished = service.run_scan(job.scan_id)
+
+    # Only the insecure target registers a verdict; secure/error do not.
+    assert finished.domain_worst == {"vuln.example.com": ResultStatus.INSECURE}
 
 
 def test_counts_accurate_after_filter(monkeypatch):

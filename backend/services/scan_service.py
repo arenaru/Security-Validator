@@ -178,6 +178,8 @@ class ScanService:
 				job.errors.extend(module_errors)
 				if module_name not in INFORMATIONAL_MODULES:
 					for item in normalized:
+						if item.status not in TRUE_POSITIVE_STATUSES:
+							continue
 						domain = normalize_target_domain(item.target)
 						if domain:
 							current = job.domain_worst.get(domain, ResultStatus.INFO)
@@ -343,11 +345,11 @@ class ScanService:
 		for r in all_results:
 			counts[r.status.value] = counts.get(r.status.value, 0) + 1
 
-		if module_name in INFORMATIONAL_MODULES:
-			return all_results, errors, counts
-
-		filtered = [r for r in all_results if r.status in TRUE_POSITIVE_STATUSES]
-		return filtered, errors, counts
+		# Every scanned target stays visible, regardless of outcome. The domain
+		# verdict is kept honest separately (see run_scan): only true-positive
+		# rows feed domain_worst, so a secure or errored target cannot change a
+		# domain's overall status.
+		return all_results, errors, counts
 
 	def _flatten_hsts_tuple(self, payload: tuple[object, object]) -> list[dict[str, object]]:
 		secure_list, failed_list = payload

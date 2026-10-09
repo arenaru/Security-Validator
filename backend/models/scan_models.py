@@ -45,10 +45,10 @@ class ResultStatus(str, Enum):
 
 TRUE_POSITIVE_STATUSES: frozenset = frozenset({ResultStatus.WARNING, ResultStatus.INSECURE})
 
-# Modules that report reconnaissance data rather than vulnerabilities. Their
-# rows bypass the true-positive filter (so every scanned target stays visible
-# in the report) and are excluded from domain_worst aggregation (so a healthy
-# HTTP 200 or a country lookup cannot degrade a domain's overall verdict).
+# Modules that report reconnaissance data rather than vulnerabilities. All
+# modules now keep every scanned target in their results; this set only governs
+# domain_worst aggregation, excluding these modules so a healthy HTTP 200 or a
+# country lookup cannot degrade a domain's overall verdict.
 INFORMATIONAL_MODULES: frozenset = frozenset({
     "Response Code Check",
     "IP Country Lookup",
