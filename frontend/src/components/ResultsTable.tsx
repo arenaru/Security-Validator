@@ -120,16 +120,32 @@ function renderTargetLink(urlStr: string) {
 }
 
 /**
- * Renders an HTTP code as a neutral badge. Deliberately uncoloured by class:
- * this module is reconnaissance, and painting 401/404 amber would re-introduce
- * the "every non-200 is a problem" false positive the module just removed.
+ * Renders an HTTP code as a coloured badge: emerald for 2xx/3xx, amber for
+ * 4xx/5xx, neutral slate when there is no code at all.
+ *
+ * The colour is a readability aid for scanning a long list, not a severity
+ * verdict — this module is reconnaissance and emits no status/severity field.
+ *
+ * N/A is deliberately its own bucket: the original rule tested only
+ * startsWith('4') || startsWith('5'), so "N/A" fell through to emerald and an
+ * unreachable host rendered green, i.e. looked like a success.
  */
 function renderCodeBadge(code: string) {
   if (code === '-' || code === 'N/A') {
-    return <span className="font-mono text-xs text-slate-500">{code === '-' ? 'N/A' : code}</span>
+    return (
+      <span className="font-mono font-bold px-2 py-0.5 rounded text-xs bg-slate-800 text-slate-400 border border-slate-700">
+        N/A
+      </span>
+    )
   }
+
+  const isClientOrServerError = code.startsWith('4') || code.startsWith('5')
+  const colorCls = isClientOrServerError
+    ? 'bg-amber-950/60 text-amber-300 border-amber-800'
+    : 'bg-emerald-950/40 text-emerald-300 border-emerald-800'
+
   return (
-    <span className="font-mono font-bold px-2 py-0.5 rounded text-xs bg-slate-800 text-slate-200 border border-slate-700">
+    <span className={`font-mono font-bold px-2 py-0.5 rounded text-xs border ${colorCls}`}>
       {code}
     </span>
   )

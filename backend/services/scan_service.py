@@ -5,9 +5,18 @@ from dataclasses import dataclass
 from io import BytesIO
 
 import pandas as pd
+from openpyxl.styles import Font, PatternFill
 
 from backend.models.scan_models import INFORMATIONAL_MODULES, ModuleError, ModuleResult, ResultStatus, ScanJob, ScanJobStatus, ScanOptions, SkippedTarget, TRUE_POSITIVE_STATUSES, utc_now
 from backend.schemas.scan_schemas import ScanCreateRequest, ScanStatusResponse, ScanSummaryResponse, merge_domain_status, normalize_target_domain
+from backend.utils.report_columns import (
+	GENERIC_COLUMNS,
+	HTTP_CODE_COLUMNS,
+	MODULE_COLUMNS,
+	ROW_NUMBER_HEADER,
+	code_fill_bucket,
+	resolve_cell,
+)
 from backend.utils.scanner_engine import iter_scanning_engine_results
 from backend.utils.target_resolver import (
 	UnsafeTargetError,
@@ -23,6 +32,14 @@ _STORE_TTL_SECONDS = 4 * 3600  # 4 hours
 # TCP connects are cheap (no TLS, no body), so the pre-flight runs far wider
 # than job parallelism, which governs the expensive HTTP modules.
 _PORT_PROBE_THREADS = 50
+
+# Light tints of the UI's emerald/amber/slate badges, with dark text so they
+# stay readable on Excel's white background.
+_CODE_CELL_STYLES: dict[str, tuple[PatternFill, str]] = {
+	"ok": (PatternFill(start_color="FFD1FAE5", end_color="FFD1FAE5", fill_type="solid"), "FF065F46"),
+	"error": (PatternFill(start_color="FFFEF3C7", end_color="FFFEF3C7", fill_type="solid"), "FF92400E"),
+	"none": (PatternFill(start_color="FFE2E8F0", end_color="FFE2E8F0", fill_type="solid"), "FF475569"),
+}
 
 
 class InMemoryScanStore:
@@ -207,23 +224,85 @@ class ScanService:
 
 			for module_name in job.modules:
 				module_items = job.results.get(module_name, [])
-				rows = [
-					{
-						"module": item.module,
-						"target": item.target,
-						"status": item.status.value,
-						"details": item.details,
-						"severity": item.severity.value if item.severity else None,
-						"code": item.code,
-						"vuln_name": item.vuln_name,
-					}
-					for item in module_items
-				]
-				df = pd.DataFrame(rows)
 				sheet_name = module_name[:31] if module_name else "results"
+				spec = MODULE_COLUMNS.get(module_name)
+
+				if spec is None:
+					headers = list(GENERIC_COLUMNS)
+					rows = [self._generic_row(item) for item in module_items]
+				else:
+					headers = [header for header, _ in spec]
+					rows = [
+						self._spec_row(item, spec, index)
+						for index, item in enumerate(module_items, start=1)
+					]
+
+				# Explicit columns so headers are still written when a module
+				# returned no rows; pd.DataFrame([]) would emit a blank sheet.
+				df = pd.DataFrame(rows, columns=headers)
 				df.to_excel(writer, index=False, sheet_name=sheet_name)
 
+				code_columns = HTTP_CODE_COLUMNS.get(module_name)
+				if code_columns:
+					self._fill_code_cells(
+						writer.sheets[sheet_name], headers, rows, code_columns
+					)
+
 		return bio.getvalue()
+
+	def _generic_row(self, item: ModuleResult) -> dict[str, object]:
+		return {
+			"module": item.module,
+			"target": item.target,
+			"status": item.status.value,
+			"details": item.details,
+			"severity": item.severity.value if item.severity else None,
+			"code": item.code,
+			"vuln_name": item.vuln_name,
+		}
+
+	def _spec_row(
+		self,
+		item: ModuleResult,
+		spec: tuple[tuple[str, tuple[str, ...]], ...],
+		row_number: int,
+	) -> dict[str, object]:
+		row: dict[str, object] = {}
+		for header, keys in spec:
+			if header == ROW_NUMBER_HEADER and not keys:
+				row[header] = row_number
+				continue
+			value = resolve_cell(item.raw, keys)
+			row[header] = "N/A" if value is None else value
+		return row
+
+	def _fill_code_cells(
+		self,
+		worksheet: object,
+		headers: list[str],
+		rows: list[dict[str, object]],
+		code_columns: frozenset[str],
+	) -> None:
+		"""
+		Tint HTTP code cells to match the UI badges (emerald/amber/slate).
+
+		Light tints with dark text rather than the UI's dark-theme hex values,
+		which would be unreadable on Excel's white background.
+		"""
+		for header in code_columns:
+			if header not in headers:
+				continue
+			column_index = headers.index(header) + 1
+			for offset, row in enumerate(rows):
+				bucket = code_fill_bucket(row.get(header))
+				style = _CODE_CELL_STYLES.get(bucket)
+				if style is None:
+					continue
+				fill, font_color = style
+				# +2: row 1 is the header, and enumerate starts at 0.
+				cell = worksheet.cell(row=offset + 2, column=column_index)
+				cell.fill = fill
+				cell.font = Font(color=font_color, bold=True)
 
 	def require_job(self, scan_id: str) -> ScanJob:
 		job = self.store.get(scan_id)
