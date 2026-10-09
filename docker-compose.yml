@@ -34,6 +34,14 @@ services:
     ports:
       - "3000:3000"
     restart: unless-stopped
+    # The image bakes the source in via `COPY . .`, so without these mounts the
+    # dev server keeps serving the code it was built with and edits never show
+    # up. Only src/ and index.html are mounted: mounting the whole ./frontend
+    # would shadow the container's node_modules, whose native binaries (esbuild,
+    # rollup) are built for alpine/musl and differ from the host's.
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/index.html:/app/index.html
     environment:
       - CHOKIDAR_USEPOLLING=true
       - VITE_API_PROXY_TARGET=http://secval:8000
