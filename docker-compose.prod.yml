@@ -1,0 +1,25 @@
+# Production compose untuk SecVal
+#
+# Jalanin di VPS:  docker compose -f docker-compose.prod.yml up -d --build
+#
+# Beda dari docker-compose.yml (dev):
+#  - Backend bind ke 127.0.0.1:8000 (cuma bisa diakses dari dalam VPS / nginx),
+#    BUKAN 0.0.0.0, jadi ga keekspos ke internet langsung.
+#  - TANPA service frontend: di production frontend di-build jadi static (dist/)
+#    dan di-serve nginx host, bukan lewat Vite dev server.
+#  - TANPA mount ./backend & TANPA --reload (override command uvicorn).
+
+services:
+  secval:
+    build: .
+    container_name: secval-app
+    # Bind ke loopback aja -> hanya nginx (di host) yang bisa akses.
+    ports:
+      - "127.0.0.1:8000:8000"
+    restart: unless-stopped
+    environment:
+      - TZ=Asia/Jakarta
+    env_file:
+      - .env
+    # Override CMD Dockerfile: buang --reload untuk production.
+    command: ["uvicorn", "backend.app_fastapi:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -2,6 +2,3 @@
 # The clean filter makes CRLF working-tree copies compare equal to LF blobs,
 # ending the phantom "every file modified" status churn.
 * text=auto
-
-# The telegram bot is scheduled for removal; leave its line endings untouched.
-bot/** -text

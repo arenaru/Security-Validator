@@ -1,0 +1,22 @@
+# Build frontend jadi static untuk production.
+#
+# Dipakai oleh deploy/deploy.sh: image ini di-build, lalu isi /app/dist
+# diambil (copy) ke host dan ditaruh di /var/www/secval buat di-serve nginx.
+#
+# Multi-stage biar hasil akhirnya cuma folder dist (ga ada node_modules).
+
+FROM node:20-alpine AS build
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci || npm install
+
+COPY . .
+
+# Hasil: /app/dist
+RUN npm run build
+
+# Stage akhir cuma nampung dist biar gampang di-extract.
+FROM scratch AS artifact
+COPY --from=build /app/dist /dist
