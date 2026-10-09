@@ -17,6 +17,8 @@ COPY . .
 # Hasil: /app/dist
 RUN npm run build
 
-# Stage akhir cuma nampung dist biar gampang di-extract.
+# Stage akhir cuma nampung dist biar gampang di-extract via `docker build --output`.
+# Isi dist ditaruh di root supaya hasil export langsung berupa file-file dist
+# (ga ada subfolder /dist).
 FROM scratch AS artifact
-COPY --from=build /app/dist /dist
+COPY --from=build /app/dist /

@@ -24,17 +24,17 @@ WEBROOT="/var/www/secval"
 
 echo "==> Repo: $REPO_ROOT"
 
-# --- 1. Build frontend jadi static (via Docker, VPS ga perlu Node) ----------
-echo "==> Build frontend..."
-docker build -f frontend/Dockerfile.prod -t secval-frontend-build ./frontend
-
-# --- 2. Extract dist dari image ke host, lalu copy ke webroot ---------------
-echo "==> Ambil hasil build (dist)..."
+# --- 1 & 2. Build frontend + export dist langsung ke folder host ------------
+# Pakai `--output` (BuildKit): stage "artifact" (FROM scratch) di-export
+# sebagai filesystem ke TMP_DIST. Ga perlu docker create/cp (yang gagal untuk
+# image tanpa command).
+echo "==> Build frontend + ambil hasil (dist)..."
 TMP_DIST="$(mktemp -d)"
-# Bikin container sementara dari image build, copy /dist keluar.
-CID="$(docker create secval-frontend-build)"
-docker cp "$CID:/dist/." "$TMP_DIST/"
-docker rm "$CID" >/dev/null
+docker build \
+    -f frontend/Dockerfile.prod \
+    --target artifact \
+    --output "type=local,dest=$TMP_DIST" \
+    ./frontend
 
 echo "==> Deploy ke $WEBROOT..."
 sudo mkdir -p "$WEBROOT"
