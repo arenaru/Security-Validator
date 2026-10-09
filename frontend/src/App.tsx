@@ -1,25 +1,17 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import {
   AlertTriangle,
-  BarChart3,
   Download,
-  Layers,
   Loader2,
   Printer,
   RotateCcw,
   Shield,
-  Target,
 } from 'lucide-react'
 import { scanApi } from './api/client'
 import { ScanForm } from './components/ScanForm'
 import { ProgressBar } from './components/ProgressBar'
 import { ResultsTable } from './components/ResultsTable'
-import { TargetReportList } from './components/TargetReportList'
-import { WebSummaryReport } from './components/WebSummaryReport'
-import { transformToTargetReports } from './utils/reportTransformer'
 import type { ScanStatusResponse } from './types'
-
-type ViewMode = 'target' | 'summary' | 'module'
 
 function App() {
   const [scanId, setScanId] = useState<string | null>(null)
@@ -28,8 +20,6 @@ function App() {
   const [isDownloading, setIsDownloading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
-  const [viewMode, setViewMode] = useState<ViewMode>('module')
-  const [targetSearchQuery, setTargetSearchQuery] = useState('')
 
   const isScanning = scanStatus?.status === 'running' || scanStatus?.status === 'pending'
   const isFinished = scanStatus?.status === 'done' || scanStatus?.status === 'partial' || scanStatus?.status === 'failed'
@@ -81,8 +71,6 @@ function App() {
       })
 
       setScanId(response.scanId)
-      setViewMode('module')
-      setTargetSearchQuery('')
       setScanStatus({
         scanId: response.scanId,
         status: response.status,
@@ -115,13 +103,6 @@ function App() {
     setScanStatus(null)
     setError(null)
     setElapsedSeconds(0)
-    setViewMode('module')
-    setTargetSearchQuery('')
-  }
-
-  const handleSelectTargetFromSummary = (domain: string) => {
-    setTargetSearchQuery(domain)
-    setViewMode('target')
   }
 
   const handleDownloadReport = async () => {
@@ -148,12 +129,6 @@ function App() {
   const handlePrint = () => {
     window.print()
   }
-
-  // Transform data to domain-centric reports
-  const targetReports = useMemo(() => {
-    if (!scanStatus?.results) return []
-    return transformToTargetReports(scanStatus.results, scanStatus.targets)
-  }, [scanStatus?.results, scanStatus?.targets])
 
   const hasResults = Boolean(scanStatus?.results && Object.keys(scanStatus.results).length > 0)
 
@@ -265,79 +240,16 @@ function App() {
         {/* Results Section */}
         {hasResults && (
           <section className="space-y-4 pt-2">
-            {/* View Mode Switcher Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-800/80 no-print">
-              <div>
-                <h2 className="text-lg font-bold text-slate-100">Hasil Pemeriksaan Keamanan</h2>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Pilih sudut pandang pemeriksaan: berorientasi target (domain) atau per modul pengujian.
-                </p>
-              </div>
-
-              {/* Toggle Switcher: 3 Views (module-centric first, matching the default) */}
-              <div className="flex items-center gap-1 p-1 bg-slate-900 border border-slate-800 rounded-xl overflow-x-auto">
-                <button
-                  type="button"
-                  onClick={() => setViewMode('module')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 transition-all shrink-0 ${
-                    viewMode === 'module'
-                      ? 'bg-blue-600 text-white shadow-sm'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-                  }`}
-                >
-                  <Layers size={14} />
-                  <span>Rincian Per Modul</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setViewMode('target')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 transition-all shrink-0 ${
-                    viewMode === 'target'
-                      ? 'bg-blue-600 text-white shadow-sm'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-                  }`}
-                >
-                  <Target size={14} />
-                  <span>Rapor Per Target ({targetReports.length})</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setViewMode('summary')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 transition-all shrink-0 ${
-                    viewMode === 'summary'
-                      ? 'bg-blue-600 text-white shadow-sm'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-                  }`}
-                >
-                  <BarChart3 size={14} />
-                  <span>Summary Report</span>
-                </button>
-              </div>
+            {/* Results Header */}
+            <div className="pb-2 border-b border-slate-800/80 no-print">
+              <h2 className="text-lg font-bold text-slate-100">Hasil Pemeriksaan Keamanan</h2>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Rincian hasil per modul pengujian. Pilih modul pada daftar di bawah.
+              </p>
             </div>
 
-            {/* View: Domain-Centric Target Report */}
-            {viewMode === 'target' && (
-              <TargetReportList
-                reports={targetReports}
-                initialSearch={targetSearchQuery}
-              />
-            )}
-
-            {/* View: Interactive Web Summary Report */}
-            {viewMode === 'summary' && scanStatus?.results && (
-              <WebSummaryReport
-                targetReports={targetReports}
-                results={scanStatus.results}
-                onSelectTarget={handleSelectTargetFromSummary}
-              />
-            )}
-
-            {/* View: Module-Centric Detail Table (default) */}
-            {viewMode === 'module' && scanStatus?.results && (
-              <ResultsTable results={scanStatus.results} />
-            )}
+            {/* Module-Centric Detail Table */}
+            {scanStatus?.results && <ResultsTable results={scanStatus.results} />}
 
             {/* Skipped Targets (dropped by DNS/TCP pre-flight before scanning) */}
             {scanStatus?.skippedTargets && scanStatus.skippedTargets.length > 0 && (

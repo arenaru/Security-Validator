@@ -85,20 +85,6 @@ export interface ScanSummaryResponse {
   totals: SummaryTotals
 }
 
-/**
- * Modules that report reconnaissance data rather than vulnerabilities. Mirrors
- * INFORMATIONAL_MODULES in backend/models/scan_models.py — keep both in sync.
- *
- * Their rows must never become action items and must never drive a domain's
- * overallStatus: an HTTP 401 on an auth-gated API or a 404 on an unused path is
- * normal, not a finding. They are also not "passed" checks, since no security
- * test was performed.
- */
-export const INFORMATIONAL_MODULES: ReadonlySet<string> = new Set([
-  'Response Code Check',
-  'IP Country Lookup',
-])
-
 export const MODULE_NAMES = [
   'SSL Certificate Check',
   'SSL Certificate Hostname Mismatch',
@@ -115,49 +101,6 @@ export const MODULE_NAMES = [
   'PHP Version Disclosure',
   'IP Country Lookup',
 ] as const
-
-export interface TargetGeoInfo {
-  ip?: string
-  country?: string
-  countryCode?: string
-  city?: string
-  isp?: string
-  as?: string
-}
-
-export interface TargetFinding {
-  module: string
-  status: 'secure' | 'warning' | 'insecure' | 'error' | 'info'
-  details: string
-  severity?: 'low' | 'medium' | 'high' | 'critical'
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  raw?: Record<string, any>
-  missingHeaders?: string[]
-  payload?: string
-  evidence?: string
-  sisaHari?: string | number
-  expiredDate?: string
-  statusCode?: string | number
-}
-
-export interface TargetReport {
-  target: string
-  normalizedDomain: string
-  overallStatus: 'secure' | 'warning' | 'insecure' | 'error'
-  geo?: TargetGeoInfo
-  issues: TargetFinding[]
-  passed: TargetFinding[]
-  /** Recon rows (see INFORMATIONAL_MODULES): neither findings nor passed checks. */
-  recon: TargetFinding[]
-  counts: {
-    total: number
-    insecure: number
-    warning: number
-    secure: number
-    error: number
-    info: number
-  }
-}
 
 export interface ModuleCategoryDef {
   id: string
