@@ -2,8 +2,10 @@ services:
   secval:
     build: .
     container_name: secval-app
+    # Bind ke loopback: dev server ga boleh keekspos ke internet.
+    # (Produksi pakai docker-compose.prod.yml + nginx di depan.)
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     restart: unless-stopped
     environment:
       - TZ=Asia/Jakarta
@@ -16,8 +18,9 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: secval-frontend
+    # Bind ke loopback: Vite dev server ga boleh keekspos ke internet.
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     restart: unless-stopped
     # The image bakes the source in via `COPY . .`, so without these mounts the
     # dev server keeps serving the code it was built with and edits never show
