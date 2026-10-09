@@ -8,6 +8,7 @@ import {
   ChevronUp,
   Copy,
   Globe,
+  Info,
   Server,
   ShieldAlert,
   ShieldCheck,
@@ -23,6 +24,7 @@ interface TargetCardProps {
 export function TargetCard({ report }: TargetCardProps) {
   const [copied, setCopied] = useState(false)
   const [passedOpen, setPassedOpen] = useState(false)
+  const [reconOpen, setReconOpen] = useState(false)
   const [expandedDetails, setExpandedDetails] = useState<Record<string, boolean>>({})
 
   const handleCopy = async () => {
@@ -184,6 +186,44 @@ export function TargetCard({ report }: TargetCardProps) {
                 Tidak ditemukan celah keamanan kritis atau peringatan pada seluruh modul yang diaktifkan untuk domain ini.
               </p>
             </div>
+          </div>
+        )}
+
+        {/* Recon Data (facts, not findings) */}
+        {report.recon.length > 0 && (
+          <div className="pt-2 border-t border-slate-800/60">
+            <button
+              type="button"
+              onClick={() => setReconOpen(!reconOpen)}
+              className="w-full flex items-center justify-between text-xs text-slate-400 hover:text-slate-200 py-1.5 transition-colors font-medium"
+            >
+              <span className="flex items-center gap-2">
+                <Info size={14} className="text-sky-400" />
+                Data rekonesans ({report.recon.length}) — informasi, bukan temuan
+              </span>
+              {reconOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            </button>
+
+            {reconOpen && (
+              <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                {report.recon.map((r, idx) => (
+                  <div
+                    key={`${r.module}-${idx}`}
+                    className="flex items-start gap-2 p-2.5 rounded bg-slate-900/60 border border-slate-800/80"
+                  >
+                    <Info size={14} className="text-sky-400 shrink-0 mt-0.5" />
+                    <div className="min-w-0">
+                      <span className="font-semibold text-slate-200 block truncate">{r.module}</span>
+                      {r.details && (
+                        <span className="text-slate-400 text-[11px] block break-words mt-0.5">
+                          {r.details}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

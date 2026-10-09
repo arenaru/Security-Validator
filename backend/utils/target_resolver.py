@@ -287,6 +287,12 @@ def resolve_reachable_target(
     the HTTP URL here would hide the TLS defect and make every downstream
     module (HSTS, Cookie Secure, ...) report the target as plain-HTTP insecure.
 
+    For the same reason, a transient HTTPS failure does not downgrade either
+    when port 443 is open: HTTP and HTTPS are different services that routinely
+    answer with different codes, so measuring HTTP and reporting it as this
+    target's result is simply the wrong answer. HTTP is only used when 443 is
+    genuinely closed.
+
     When a PortProbe is supplied, candidates are narrowed to schemes whose port
     answered, so no HTTP request is spent on a closed or black-holed port.
     """
@@ -297,7 +303,10 @@ def resolve_reachable_target(
     else:
         candidates = build_target_candidates(target)
 
+    https_is_open = probe is not None and HTTPS_PORT in probe.open_ports
+
     for candidate in candidates:
+        is_https = urlparse(candidate).scheme.lower() == "https"
         try:
             response = requests.get(
                 candidate,
@@ -313,6 +322,11 @@ def resolve_reachable_target(
             # TLS is broken but present — keep HTTPS, do not try HTTP.
             return candidate
         except requests.exceptions.RequestException:
+            # Port 443 answered the TCP pre-flight, so an HTTPS service exists.
+            # A timeout/reset here is transient; falling through to HTTP would
+            # report a different service's response code as this target's.
+            if is_https and https_is_open:
+                return candidate
             continue
     return str(target or "").strip()
 

@@ -28,7 +28,7 @@ function App() {
   const [isDownloading, setIsDownloading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
-  const [viewMode, setViewMode] = useState<ViewMode>('target')
+  const [viewMode, setViewMode] = useState<ViewMode>('module')
   const [targetSearchQuery, setTargetSearchQuery] = useState('')
 
   const isScanning = scanStatus?.status === 'running' || scanStatus?.status === 'pending'
@@ -81,7 +81,7 @@ function App() {
       })
 
       setScanId(response.scanId)
-      setViewMode('target')
+      setViewMode('module')
       setTargetSearchQuery('')
       setScanStatus({
         scanId: response.scanId,
@@ -99,6 +99,7 @@ function App() {
         },
         results: null,
         errors: [],
+        skippedTargets: [],
       })
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Gagal memulai proses scan.'
@@ -114,7 +115,7 @@ function App() {
     setScanStatus(null)
     setError(null)
     setElapsedSeconds(0)
-    setViewMode('target')
+    setViewMode('module')
     setTargetSearchQuery('')
   }
 
@@ -273,8 +274,21 @@ function App() {
                 </p>
               </div>
 
-              {/* Toggle Switcher: 3 Views */}
+              {/* Toggle Switcher: 3 Views (module-centric first, matching the default) */}
               <div className="flex items-center gap-1 p-1 bg-slate-900 border border-slate-800 rounded-xl overflow-x-auto">
+                <button
+                  type="button"
+                  onClick={() => setViewMode('module')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 transition-all shrink-0 ${
+                    viewMode === 'module'
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                  }`}
+                >
+                  <Layers size={14} />
+                  <span>Rincian Per Modul</span>
+                </button>
+
                 <button
                   type="button"
                   onClick={() => setViewMode('target')}
@@ -300,23 +314,10 @@ function App() {
                   <BarChart3 size={14} />
                   <span>Summary Report</span>
                 </button>
-
-                <button
-                  type="button"
-                  onClick={() => setViewMode('module')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 transition-all shrink-0 ${
-                    viewMode === 'module'
-                      ? 'bg-blue-600 text-white shadow-sm'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-                  }`}
-                >
-                  <Layers size={14} />
-                  <span>Rincian Per Modul</span>
-                </button>
               </div>
             </div>
 
-            {/* View 1: Domain-Centric Target Report (Default) */}
+            {/* View: Domain-Centric Target Report */}
             {viewMode === 'target' && (
               <TargetReportList
                 reports={targetReports}
@@ -324,7 +325,7 @@ function App() {
               />
             )}
 
-            {/* View 2: Interactive Web Summary Report */}
+            {/* View: Interactive Web Summary Report */}
             {viewMode === 'summary' && scanStatus?.results && (
               <WebSummaryReport
                 targetReports={targetReports}
@@ -333,9 +334,30 @@ function App() {
               />
             )}
 
-            {/* View 3: Module-Centric Detail Table */}
+            {/* View: Module-Centric Detail Table (default) */}
             {viewMode === 'module' && scanStatus?.results && (
               <ResultsTable results={scanStatus.results} />
+            )}
+
+            {/* Skipped Targets (dropped by DNS/TCP pre-flight before scanning) */}
+            {scanStatus?.skippedTargets && scanStatus.skippedTargets.length > 0 && (
+              <div className="card p-5 border-slate-700/60 bg-slate-900/40 space-y-3 no-print">
+                <h3 className="text-sm font-semibold text-slate-200 flex items-center gap-2">
+                  <AlertTriangle size={16} className="text-slate-400" />
+                  Target dilewati ({scanStatus.skippedTargets.length}) — tidak dapat dijangkau
+                </h3>
+                <div className="space-y-1.5">
+                  {scanStatus.skippedTargets.map((item, idx) => (
+                    <div
+                      key={`${item.target}-${idx}`}
+                      className="text-xs p-2.5 rounded bg-slate-900/60 border border-slate-800 text-slate-300 flex items-start gap-2"
+                    >
+                      <strong className="text-slate-200 shrink-0 font-mono">{item.target}:</strong>
+                      <span className="text-slate-400 break-words">{item.reason}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
 
             {/* Module Scan Errors (if any specific module crashed/timed out) */}

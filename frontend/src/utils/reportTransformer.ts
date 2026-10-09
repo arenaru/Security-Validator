@@ -1,3 +1,4 @@
+import { INFORMATIONAL_MODULES } from '../types'
 import type {
   ModuleResult,
   TargetFinding,
@@ -145,12 +146,24 @@ export function transformToTargetReports(
     const issues: TargetFinding[] = []
     const passed: TargetFinding[] = []
 
+    const recon: TargetFinding[] = []
+
     let insecureCount = 0
     let warningCount = 0
     let secureCount = 0
     let errorCount = 0
+    let infoCount = 0
 
     for (const f of entry.findings) {
+      // Recon modules report facts, not findings. Routing them here keeps a
+      // 401/404 off the remediation list and out of overallStatus, and stops an
+      // HTTP 200 being counted as a passed security check.
+      if (INFORMATIONAL_MODULES.has(f.module)) {
+        infoCount++
+        recon.push(f)
+        continue
+      }
+
       const st = f.status.toLowerCase()
       if (st === 'insecure') {
         insecureCount++
@@ -161,6 +174,9 @@ export function transformToTargetReports(
       } else if (st === 'error') {
         errorCount++
         issues.push(f)
+      } else if (st === 'info') {
+        infoCount++
+        recon.push(f)
       } else {
         secureCount++
         passed.push(f)
@@ -183,12 +199,14 @@ export function transformToTargetReports(
       geo: entry.geo,
       issues,
       passed,
+      recon,
       counts: {
         total: entry.findings.length,
         insecure: insecureCount,
         warning: warningCount,
         secure: secureCount,
         error: errorCount,
+        info: infoCount,
       },
     })
   }
@@ -232,7 +250,7 @@ export function formatTargetReportText(report: TargetReport): string {
   }
 
   lines.push(`Status Keseluruhan: ${report.overallStatus.toUpperCase()}`)
-  lines.push(`Rekapitulasi: ${report.counts.insecure} Rentan, ${report.counts.warning} Peringatan, ${report.counts.secure} Lolos`)
+  lines.push(`Rekapitulasi: ${report.counts.insecure} Rentan, ${report.counts.warning} Peringatan, ${report.counts.secure} Lolos, ${report.counts.info} Info`)
   lines.push('')
 
   if (report.issues.length > 0) {
@@ -258,6 +276,14 @@ export function formatTargetReportText(report: TargetReport): string {
     lines.push('[MODUL LOLOS UJI]:')
     const passedList = report.passed.map(p => `• ${p.module}`).join('\n')
     lines.push(passedList)
+    lines.push('')
+  }
+
+  if (report.recon.length > 0) {
+    lines.push('[DATA REKONESANS (bukan temuan)]:')
+    for (const r of report.recon) {
+      lines.push(`• ${r.module}: ${r.details || '-'}`)
+    }
   }
 
   lines.push('')
@@ -284,6 +310,9 @@ export interface ModuleMatrixItem {
   warningCount: number
   secureCount: number
   errorCount: number
+  infoCount: number
+  /** True for recon modules (see INFORMATIONAL_MODULES): reports facts, not findings. */
+  informational: boolean
 }
 
 export function extractSummaryData(
@@ -314,16 +343,27 @@ export function extractSummaryData(
 
   const moduleMatrix: ModuleMatrixItem[] = []
   for (const [moduleName, items] of Object.entries(results)) {
+    const informational = INFORMATIONAL_MODULES.has(moduleName)
+
     let insecureCount = 0
     let warningCount = 0
     let secureCount = 0
     let errorCount = 0
+    let infoCount = 0
 
     for (const item of items) {
+      // Recon rows are facts, not verdicts: counting them as "Lolos" would
+      // claim a security test passed when none was performed.
+      if (informational) {
+        infoCount++
+        continue
+      }
+
       const st = String(item.status).toLowerCase()
       if (st === 'insecure') insecureCount++
       else if (st === 'warning') warningCount++
       else if (st === 'error') errorCount++
+      else if (st === 'info') infoCount++
       else secureCount++
     }
 
@@ -334,6 +374,8 @@ export function extractSummaryData(
       warningCount,
       secureCount,
       errorCount,
+      infoCount,
+      informational,
     })
   }
 
@@ -383,11 +425,15 @@ export function formatFullSummaryText(
     lines.push('')
   }
 
-  lines.push('[ 2. MATRIKS 14 MODUL PEMERIKSAAN ]')
+  lines.push(`[ 2. MATRIKS ${moduleMatrix.length} MODUL PEMERIKSAAN ]`)
   for (const m of moduleMatrix) {
-    lines.push(
-      `• ${m.moduleName.padEnd(32)} | Total: ${m.targetCount} | Rentan: ${m.insecureCount} | Warning: ${m.warningCount} | Lolos: ${m.secureCount}`
-    )
+    if (m.informational) {
+      lines.push(`• ${m.moduleName.padEnd(32)} | Total: ${m.targetCount} | Rekonesans (bukan temuan)`)
+    } else {
+      lines.push(
+        `• ${m.moduleName.padEnd(32)} | Total: ${m.targetCount} | Rentan: ${m.insecureCount} | Warning: ${m.warningCount} | Lolos: ${m.secureCount}`
+      )
+    }
   }
   lines.push('')
 

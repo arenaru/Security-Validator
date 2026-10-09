@@ -79,6 +79,8 @@ type ApiScanStatusResponse = {
   progress: ApiProgress
   results?: ScanStatusResponse['results']
   errors: ScanStatusResponse['errors']
+  skippedTargets?: ScanStatusResponse['skippedTargets']
+  skipped_targets?: ScanStatusResponse['skippedTargets']
 }
 
 type ApiScanSummaryResponse = {
@@ -123,6 +125,7 @@ function normalizeStatusResponse(data: ApiScanStatusResponse): ScanStatusRespons
     progress: normalizeProgress(data.progress),
     results: data.results ?? null,
     errors: data.errors,
+    skippedTargets: data.skippedTargets ?? data.skipped_targets ?? [],
   }
 }
 

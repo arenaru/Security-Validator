@@ -41,6 +41,11 @@ export interface ModuleError {
   target?: string
 }
 
+export interface SkippedTarget {
+  target: string
+  reason: string
+}
+
 export interface ScanStatusResponse {
   scanId: string
   status: ScanStatus
@@ -53,6 +58,8 @@ export interface ScanStatusResponse {
   progress: Progress
   results?: Record<string, ModuleResult[]> | null
   errors: ModuleError[]
+  /** Targets dropped before scanning (DNS/TCP pre-flight), with the reason. */
+  skippedTargets: SkippedTarget[]
 }
 
 export interface ModuleSummary {
@@ -77,6 +84,20 @@ export interface ScanSummaryResponse {
   byModule: ModuleSummary[]
   totals: SummaryTotals
 }
+
+/**
+ * Modules that report reconnaissance data rather than vulnerabilities. Mirrors
+ * INFORMATIONAL_MODULES in backend/models/scan_models.py — keep both in sync.
+ *
+ * Their rows must never become action items and must never drive a domain's
+ * overallStatus: an HTTP 401 on an auth-gated API or a 404 on an unused path is
+ * normal, not a finding. They are also not "passed" checks, since no security
+ * test was performed.
+ */
+export const INFORMATIONAL_MODULES: ReadonlySet<string> = new Set([
+  'Response Code Check',
+  'IP Country Lookup',
+])
 
 export const MODULE_NAMES = [
   'SSL Certificate Check',
@@ -126,12 +147,15 @@ export interface TargetReport {
   geo?: TargetGeoInfo
   issues: TargetFinding[]
   passed: TargetFinding[]
+  /** Recon rows (see INFORMATIONAL_MODULES): neither findings nor passed checks. */
+  recon: TargetFinding[]
   counts: {
     total: number
     insecure: number
     warning: number
     secure: number
     error: number
+    info: number
   }
 }
 

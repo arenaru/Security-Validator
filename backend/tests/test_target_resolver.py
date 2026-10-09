@@ -164,6 +164,43 @@ def test_resolve_reachable_target_returns_original_when_unreachable(monkeypatch)
     assert resolve_reachable_target("example.com") == "example.com"
 
 
+def test_resolve_reachable_target_keeps_https_when_443_open_and_https_errors(monkeypatch):
+    """
+    Port 443 answered the TCP pre-flight, so an HTTPS service exists. A
+    timeout/reset on the HTTP request is transient, and downgrading would make
+    every module measure HTTP and report a different service's response code as
+    this target's (on real infra HTTP often answers 307 where HTTPS answers 200).
+    """
+    calls = []
+
+    def fake_get(url, **kwargs):
+        calls.append(url)
+        if url.startswith("https://"):
+            raise requests.exceptions.ConnectionError("transient reset")
+        return FakeResponse()
+
+    monkeypatch.setattr(target_resolver.requests, "get", fake_get)
+    probe = target_resolver.PortProbe(host="example.com", open_ports=(443, 80))
+
+    assert resolve_reachable_target("example.com", probe=probe) == "https://example.com"
+    assert calls == ["https://example.com"]
+
+
+def test_resolve_reachable_target_uses_http_when_443_closed(monkeypatch):
+    """With 443 genuinely closed, HTTP is the only service there is."""
+    calls = []
+
+    def fake_get(url, **kwargs):
+        calls.append(url)
+        return FakeResponse()
+
+    monkeypatch.setattr(target_resolver.requests, "get", fake_get)
+    probe = target_resolver.PortProbe(host="example.com", open_ports=(80,))
+
+    assert resolve_reachable_target("example.com", probe=probe) == "http://example.com"
+    assert calls == ["http://example.com"]
+
+
 def test_resolve_reachable_target_keeps_https_on_tls_error(monkeypatch):
     """
     A TLS failure means port 443 answered, so the HTTPS URL must be kept.

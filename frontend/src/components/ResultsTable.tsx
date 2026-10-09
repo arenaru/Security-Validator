@@ -119,6 +119,22 @@ function renderTargetLink(urlStr: string) {
   )
 }
 
+/**
+ * Renders an HTTP code as a neutral badge. Deliberately uncoloured by class:
+ * this module is reconnaissance, and painting 401/404 amber would re-introduce
+ * the "every non-200 is a problem" false positive the module just removed.
+ */
+function renderCodeBadge(code: string) {
+  if (code === '-' || code === 'N/A') {
+    return <span className="font-mono text-xs text-slate-500">{code === '-' ? 'N/A' : code}</span>
+  }
+  return (
+    <span className="font-mono font-bold px-2 py-0.5 rounded text-xs bg-slate-800 text-slate-200 border border-slate-700">
+      {code}
+    </span>
+  )
+}
+
 function renderMissingHeaders(val: unknown) {
   const text = normalizeCell(val)
   if (text === '-') return <span className="text-slate-500">-</span>
@@ -210,28 +226,54 @@ function getColumnsForModule(moduleName: string, statusColors: Record<string, st
   }
 
   if (moduleName === 'Response Code Check') {
+    // Pure recon: report the code, no status/severity. A 401 on an auth-gated
+    // API and a 404 on an unused path are facts about the host, not findings.
     return [
       indexCol,
-      { key: 'url', header: 'URL', className: 'min-w-[280px]', sortable: true, sortValue: (item) => getUrl(item), render: (item) => renderTargetLink(getUrl(item)) },
+      { key: 'url', header: 'URL', className: 'min-w-[260px]', sortable: true, sortValue: (item) => getUrl(item), render: (item) => renderTargetLink(getUrl(item)) },
       {
         key: 'status_code',
         header: 'Status Code',
-        className: 'min-w-[120px]',
+        className: 'min-w-[110px]',
         sortable: true,
         sortValue: (item) => Number(normalizeCell(getRaw(item, 'Status Code'))),
+        render: (item) => renderCodeBadge(normalizeCell(getRaw(item, 'Status Code'))),
+      },
+      {
+        key: 'final_code',
+        header: 'Final Code',
+        className: 'min-w-[110px]',
+        sortable: true,
+        sortValue: (item) => Number(normalizeCell(getRaw(item, 'Final Code'))),
         render: (item) => {
-          const code = normalizeCell(getRaw(item, 'Status Code'))
-          const isErr = code.startsWith('4') || code.startsWith('5')
+          const first = normalizeCell(getRaw(item, 'Status Code'))
+          const final = normalizeCell(getRaw(item, 'Final Code'))
           return (
-            <span className={`font-mono font-bold px-2 py-0.5 rounded text-xs ${isErr ? 'bg-amber-950/60 text-amber-300 border border-amber-800' : 'bg-emerald-950/40 text-emerald-300 border border-emerald-800'}`}>
-              {code}
+            <span className="inline-flex items-center gap-1.5">
+              {renderCodeBadge(final)}
+              {final !== first && final !== '-' && (
+                <span className="text-[10px] text-slate-500 font-mono" title={`Redirected from ${first}`}>
+                  via {first}
+                </span>
+              )}
             </span>
           )
         },
       },
-      { key: 'reason', header: 'Reason', className: 'min-w-[120px]', sortable: true, sortValue: (item) => normalizeCell(getRaw(item, 'Reason')), render: (item) => <span>{normalizeCell(getRaw(item, 'Reason'))}</span> },
-      { key: 'category', header: 'Category', className: 'min-w-[140px]', sortable: true, sortValue: (item) => normalizeCell(getRaw(item, 'Category')), render: (item) => <span>{normalizeCell(getRaw(item, 'Category'))}</span> },
-      { key: 'message', header: 'Message', className: 'min-w-[220px]', sortable: true, sortValue: (item) => normalizeCell(getRaw(item, 'Message')), render: (item) => <span className="text-slate-300 break-words">{normalizeCell(getRaw(item, 'Message'))}</span> },
+      {
+        key: 'final_url',
+        header: 'Final URL',
+        className: 'min-w-[260px]',
+        sortable: true,
+        sortValue: (item) => normalizeCell(getRaw(item, 'Final URL')),
+        render: (item) => {
+          const final = normalizeCell(getRaw(item, 'Final URL'))
+          const url = getUrl(item)
+          if (final === '-' || final === url) return <span className="text-slate-500">-</span>
+          return renderTargetLink(final)
+        },
+      },
+      { key: 'message', header: 'Message', className: 'min-w-[200px]', sortable: true, sortValue: (item) => normalizeCell(getRaw(item, 'Message')), render: (item) => <span className="text-slate-300 break-words">{normalizeCell(getRaw(item, 'Message'))}</span> },
     ]
   }
 

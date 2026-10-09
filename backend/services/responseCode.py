@@ -14,33 +14,13 @@ TIMEOUT_RETRIES = 1
 RETRY_BACKOFF_SECONDS = 1.0
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"
 
-# Category -> ResultStatus string consumed by normalize_result_status().
-# Reachable-and-answering is informational; only genuine faults are findings.
-_CATEGORY_STATUS = {
-    "SUCCESS": "INFO",
-    "REDIRECT": "INFO",
-    "CLIENT_ERROR": "WARNING",
-    "SERVER_ERROR": "WARNING",
-    "OTHER": "INFO",
-    "TLS_ERROR": "WARNING",
-    "ERROR": "ERROR",
+# Browser-like headers. A bare User-Agent is enough of an outlier that some WAFs
+# answer 403 to it, which would be reported as the target's real response code.
+HEADERS = {
+    "User-Agent": USER_AGENT,
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
 }
-
-
-def _classify_status(status_code):
-    if 200 <= status_code < 300:
-        return "SUCCESS"
-    if 300 <= status_code < 400:
-        return "REDIRECT"
-    if 400 <= status_code < 500:
-        return "CLIENT_ERROR"
-    if 500 <= status_code < 600:
-        return "SERVER_ERROR"
-    return "OTHER"
-
-
-def _status_for(category):
-    return _CATEGORY_STATUS.get(category, "INFO")
 
 
 def _get_with_retry(candidate, headers):
@@ -48,6 +28,11 @@ def _get_with_retry(candidate, headers):
     GET a candidate, retrying only on timeout (transient). Connection and TLS
     errors are deterministic for a given host/port, so retrying them just
     doubles scan time.
+
+    Redirects are followed so the reported code matches what a browser, curl -L,
+    or any other response-code tool reports. Stopping at the first hop would
+    report 308 for a host that actually answers 200, and would hide a redirect
+    to a 403 login/WAF page behind a harmless 302.
     """
     last_timeout = None
     for attempt in range(TIMEOUT_RETRIES + 1):
@@ -57,7 +42,7 @@ def _get_with_retry(candidate, headers):
                 headers=headers,
                 timeout=TIMEOUT,
                 verify=False,
-                allow_redirects=False,
+                allow_redirects=True,
             )
         except requests.exceptions.Timeout as exc:
             last_timeout = exc
@@ -67,54 +52,74 @@ def _get_with_retry(candidate, headers):
 
 
 def check_response_code(target):
+    """
+    Report the HTTP response code for a target. This is reconnaissance, not a
+    vulnerability check: it carries no status/severity, because an answered
+    request is a fact about the host, not a finding. A 401 on an auth-gated API
+    and a 404 on an unused path are both normal.
+
+    "Status Code" is the first hop, "Final Code" is where the request landed.
+    They differ only when the target redirects.
+    """
     candidates = build_target_candidates(target)
-    headers = {'User-Agent': USER_AGENT}
+    headers = dict(HEADERS)
     candidate_errors = []
 
     for candidate in candidates:
         try:
             response = _get_with_retry(candidate, headers)
 
-            status_code = response.status_code
+            first_code = response.history[0].status_code if response.history else response.status_code
+            final_code = response.status_code
             reason = response.reason or ""
-            message = f"HTTP {status_code} {reason}".strip()
-            category = _classify_status(status_code)
+
+            if response.history:
+                message = f"HTTP {first_code} -> {final_code} {reason}".strip()
+            else:
+                message = f"HTTP {final_code} {reason}".strip()
 
             result = {
                 "URL": candidate,
-                "Status Code": status_code,
+                "Status Code": first_code,
+                "Final Code": final_code,
+                "Final URL": response.url,
                 "Reason": reason,
-                "Category": category,
+                "Redirects": len(response.history),
                 "Message": message,
-                "Fallback Used": False,
-                "Status": _status_for(category),
             }
 
             if candidate_errors:
                 failed = candidate_errors[-1]
-                note = (
-                    f"{failed['url']} unreachable ({failed['message']}) "
-                    f"before falling back to {candidate}"
+                result["Message"] = (
+                    f"{message} (measured over {candidate}: "
+                    f"{failed['url']} unreachable — {failed['message']})"
                 )
-                result["Fallback Used"] = True
-                result["Fallback Note"] = note
-                result["Message"] = f"{message} (fallback — {note})"
 
             return result
 
         # SSLError must precede ConnectionError: it is a subclass of it.
-        # Port 443 answered, so HTTPS exists but its TLS layer is broken — that
-        # is the finding. Downgrading to HTTP here would report the target as a
-        # healthy 200 and silently drop a real TLS defect (false negative).
+        # Port 443 answered, so HTTPS exists but its TLS layer is broken. There
+        # is no response code to report, and downgrading to HTTP would report a
+        # different service's code as this target's.
         except requests.exceptions.SSLError as e:
             return {
                 "URL": candidate,
                 "Status Code": "N/A",
+                "Final Code": "N/A",
+                "Final URL": candidate,
                 "Reason": "TLS_ERROR",
-                "Category": "TLS_ERROR",
+                "Redirects": 0,
                 "Message": f"TLS handshake failed: {str(e)[:150]}",
-                "Fallback Used": False,
-                "Status": _status_for("TLS_ERROR"),
+            }
+        except requests.exceptions.TooManyRedirects as e:
+            return {
+                "URL": candidate,
+                "Status Code": "N/A",
+                "Final Code": "N/A",
+                "Final URL": candidate,
+                "Reason": "REDIRECT_LOOP",
+                "Redirects": 0,
+                "Message": f"Redirect loop: {str(e)[:120]}",
             }
         except requests.exceptions.Timeout:
             candidate_errors.append({
@@ -143,21 +148,21 @@ def check_response_code(target):
         return {
             "URL": last_error["url"],
             "Status Code": "N/A",
+            "Final Code": "N/A",
+            "Final URL": last_error["url"],
             "Reason": last_error["error_type"],
-            "Category": "ERROR",
+            "Redirects": 0,
             "Message": last_error["message"],
-            "Fallback Used": False,
-            "Status": _status_for("ERROR"),
         }
 
     return {
-        "URL": target.strip(),
+        "URL": str(target).strip(),
         "Status Code": "N/A",
+        "Final Code": "N/A",
+        "Final URL": str(target).strip(),
         "Reason": "UNKNOWN",
-        "Category": "ERROR",
+        "Redirects": 0,
         "Message": "Unknown Error",
-        "Fallback Used": False,
-        "Status": _status_for("ERROR"),
     }
 
 
