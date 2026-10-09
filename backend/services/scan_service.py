@@ -258,8 +258,6 @@ class ScanService:
 			"target": item.target,
 			"status": item.status.value,
 			"details": item.details,
-			"severity": item.severity.value if item.severity else None,
-			"code": item.code,
 			"vuln_name": item.vuln_name,
 		}
 

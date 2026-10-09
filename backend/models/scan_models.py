@@ -55,14 +55,6 @@ INFORMATIONAL_MODULES: frozenset = frozenset({
 })
 
 
-class Severity(str, Enum):
-    INFO = "info"
-    LOW = "low"
-    MEDIUM = "medium"
-    HIGH = "high"
-    CRITICAL = "critical"
-
-
 def utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
@@ -107,8 +99,6 @@ class ModuleResult:
     target: str
     status: ResultStatus
     details: str
-    severity: Severity | None = None
-    code: str | None = None
     vuln_name: str | None = None
     raw: dict[str, Any] | None = None
 

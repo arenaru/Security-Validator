@@ -176,7 +176,7 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/ValidationErrorResponse'
+            $ref: '#/components/schemas/ErrorResponse'
     NotFound:
       description: Resource not found
       content:
@@ -405,14 +405,8 @@ components:
           description: Domain/IP/URL that was scanned
         status:
           $ref: '#/components/schemas/ResultStatus'
-        severity:
-          $ref: '#/components/schemas/Severity'
         details:
           type: string
-        code:
-          type: string
-          nullable: true
-          description: Optional machine code, e.g. HTTP_404, DNS_ERROR
         raw:
           type: object
           nullable: true
@@ -438,11 +432,6 @@ components:
     ResultStatus:
       type: string
       enum: [secure, warning, insecure, error, info]
-
-    Severity:
-      type: string
-      enum: [info, low, medium, high, critical]
-      nullable: true
 
     ModuleName:
       type: string
@@ -476,19 +465,3 @@ components:
               type: string
             traceId:
               type: string
-
-    ValidationErrorResponse:
-      allOf:
-        - $ref: '#/components/schemas/ErrorResponse'
-        - type: object
-          properties:
-            details:
-              type: array
-              items:
-                type: object
-                required: [field, message]
-                properties:
-                  field:
-                    type: string
-                  message:
-                    type: string

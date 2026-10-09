@@ -7,13 +7,14 @@ Run with: uvicorn backend.app_fastapi:app --host 0.0.0.0 --port 8000 --reload
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.controllers.scan_controller import get_scan_service as controller_get_scan_service
 from backend.controllers.scan_controller import router as scan_router
+from backend.models.scan_models import utc_now
 from backend.services.scan_service import InMemoryScanStore, ScanService
 
 # Configure logging
@@ -33,6 +34,14 @@ def get_scan_service() -> ScanService:
     return _scan_service
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Log startup/shutdown events."""
+    logger.info(f"FastAPI app started at {utc_now().isoformat()}")
+    yield
+    logger.info(f"FastAPI app shutdown at {utc_now().isoformat()}")
+
+
 # Create FastAPI app
 app = FastAPI(
     title="SecVal Scan API",
@@ -41,6 +50,7 @@ app = FastAPI(
     openapi_url="/api/docs/openapi.json",
     docs_url="/api/docs",
     redoc_url="/api/redoc",
+    lifespan=lifespan,
 )
 
 # Add CORS middleware (allow all origins for dev; restrict in prod)
@@ -67,18 +77,6 @@ async def root():
         "redoc_url": "/api/redoc",
         "openapi_url": "/api/docs/openapi.json",
     }
-
-
-@app.on_event("startup")
-async def startup_event():
-    """Log startup event."""
-    logger.info(f"FastAPI app started at {datetime.utcnow().isoformat()}")
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Log shutdown event."""
-    logger.info(f"FastAPI app shutdown at {datetime.utcnow().isoformat()}")
 
 
 if __name__ == "__main__":

@@ -28,8 +28,6 @@ export interface ModuleResult {
   target: string
   status: 'secure' | 'warning' | 'insecure' | 'error' | 'info'
   details: string
-  severity?: 'low' | 'medium' | 'high' | 'critical'
-  code?: string
   vuln_name?: string
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   raw?: Record<string, any>
@@ -60,29 +58,6 @@ export interface ScanStatusResponse {
   errors: ModuleError[]
   /** Targets dropped before scanning (DNS/TCP pre-flight), with the reason. */
   skippedTargets: SkippedTarget[]
-}
-
-export interface ModuleSummary {
-  module: string
-  count: number
-  secure: number
-  warning: number
-  insecure: number
-  error: number
-}
-
-export interface SummaryTotals {
-  items: number
-  secure: number
-  warning: number
-  insecure: number
-  error: number
-}
-
-export interface ScanSummaryResponse {
-  scanId: string
-  byModule: ModuleSummary[]
-  totals: SummaryTotals
 }
 
 export const MODULE_NAMES = [

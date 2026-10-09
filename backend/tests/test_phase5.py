@@ -1,8 +1,6 @@
 import time
 from datetime import timedelta
 
-import pytest
-
 from backend.models.scan_models import ResultStatus, ScanJob, ScanOptions
 from backend.schemas.scan_schemas import ScanCreateRequest
 from backend.services import headerCheck, scan_service as scan_service_module, tlsScanner

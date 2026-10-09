@@ -4,10 +4,10 @@ from __future__ import annotations
 import logging
 import uuid
 from dataclasses import asdict
-from datetime import datetime
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Response, status
 
+from backend.models.scan_models import utc_now
 from backend.schemas.scan_schemas import (
     ErrorPayload,
     ErrorResponse,
@@ -46,7 +46,7 @@ async def get_health() -> HealthResponse:
         status="ok",
         service="secval-api",
         version="0.1.0",
-        time=datetime.utcnow(),
+        time=utc_now(),
         dependencies={"scanner_engine": "up", "nmap": "up"},
     )
 

@@ -1,6 +1,5 @@
 import socket
 
-import pytest
 import requests as requests_lib
 
 from backend.services import ipCountry

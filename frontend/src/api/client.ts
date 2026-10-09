@@ -3,7 +3,6 @@ import type {
   ScanCreateRequest,
   ScanAcceptedResponse,
   ScanStatusResponse,
-  ScanSummaryResponse,
 } from '../types'
 
 /**
@@ -83,14 +82,6 @@ type ApiScanStatusResponse = {
   skipped_targets?: ScanStatusResponse['skippedTargets']
 }
 
-type ApiScanSummaryResponse = {
-  scanId?: string
-  scan_id?: string
-  byModule?: ScanSummaryResponse['byModule']
-  by_module?: ScanSummaryResponse['byModule']
-  totals: ScanSummaryResponse['totals']
-}
-
 function normalizeProgress(progress: ApiProgress): ScanStatusResponse['progress'] {
   const completedModules = progress.completedModules ?? progress.completed_modules ?? 0
   const totalModules = progress.totalModules ?? progress.total_modules ?? 0
@@ -129,14 +120,6 @@ function normalizeStatusResponse(data: ApiScanStatusResponse): ScanStatusRespons
   }
 }
 
-function normalizeSummaryResponse(data: ApiScanSummaryResponse): ScanSummaryResponse {
-  return {
-    scanId: data.scanId ?? data.scan_id ?? '',
-    byModule: data.byModule ?? data.by_module ?? [],
-    totals: data.totals,
-  }
-}
-
 export const scanApi = {
   // Create a new scan
   async createScan(request: ScanCreateRequest): Promise<ScanAcceptedResponse> {
@@ -158,16 +141,6 @@ export const scanApi = {
     }
   },
 
-  // Get scan summary
-  async getScanSummary(scanId: string): Promise<ScanSummaryResponse> {
-    try {
-      const { data } = await client.get<ApiScanSummaryResponse>(`/scans/${scanId}/summary`)
-      return normalizeSummaryResponse(data)
-    } catch (err) {
-      throw toApiError(err, 'Gagal mengambil ringkasan scan.')
-    }
-  },
-
   // Download XLSX report
   async downloadReport(scanId: string): Promise<Blob> {
     try {
@@ -178,11 +151,5 @@ export const scanApi = {
     } catch (err) {
       throw toApiError(err, 'Gagal mengunduh laporan.')
     }
-  },
-
-  // Health check
-  async getHealth() {
-    const { data } = await client.get('/health')
-    return data
   },
 }

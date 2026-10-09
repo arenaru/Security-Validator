@@ -41,23 +41,19 @@ def parse_single_cookie(cookie_str, cookies_dict):
         return
     
     cookie_name = name_value.split('=', 1)[0].strip()
-    
-    # Check for Secure and HttpOnly flags
+
+    # Check for Secure flag
     secure_flag = False
-    httponly_flag = False
-    
+
     for part in parts[1:]:
         part = part.strip().lower()
         if part == 'secure':
             secure_flag = True
-        elif part == 'httponly':
-            httponly_flag = True
-    
+
     # Store in dict
     if cookie_name:
         cookies_dict[cookie_name] = {
-            'secure': secure_flag,
-            'httponly': httponly_flag
+            'secure': secure_flag
         }
 
 def check_cookie_security(target):
@@ -97,8 +93,7 @@ def check_cookie_security(target):
                 cookie_name = cookie.name
                 # Update or add cookie info from session jar
                 all_cookies[cookie_name] = {
-                    'secure': cookie.secure,
-                    'httponly': hasattr(cookie, 'has_nonstandard_attr') and cookie.has_nonstandard_attr('HttpOnly')
+                    'secure': cookie.secure
                 }
 
             if not all_cookies:
@@ -110,12 +105,9 @@ def check_cookie_security(target):
 
             # Check if all cookies have Secure flag
             insecure_cookies = []
-            secure_cookies = []
 
             for cookie_name, cookie_attrs in all_cookies.items():
-                if cookie_attrs.get('secure', False):
-                    secure_cookies.append(cookie_name)
-                else:
+                if not cookie_attrs.get('secure', False):
                     insecure_cookies.append(cookie_name)
 
             if insecure_cookies:

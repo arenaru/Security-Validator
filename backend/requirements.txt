@@ -2,7 +2,6 @@ pandas
 requests
 pytz
 urllib3
-bs4
 openpyxl
 fastapi>=0.104.0
 uvicorn[standard]>=0.24.0

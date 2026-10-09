@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any
 from urllib.parse import urlparse
 
 from backend.models.scan_models import (
@@ -151,12 +150,6 @@ class ScanSummaryResponse:
 
 
 @dataclass(slots=True)
-class ErrorDetail:
-    field: str
-    message: str
-
-
-@dataclass(slots=True)
 class ErrorPayload:
     code: str
     message: str
@@ -166,7 +159,6 @@ class ErrorPayload:
 @dataclass(slots=True)
 class ErrorResponse:
     error: ErrorPayload
-    details: list[ErrorDetail] | None = None
 
 
 def normalize_target_domain(target: str) -> str:
@@ -194,8 +186,3 @@ def merge_domain_status(current: ResultStatus, next_status: ResultStatus) -> Res
         ResultStatus.INFO: 0,
     }
     return next_status if priority[next_status] > priority.get(current, 0) else current
-
-
-def to_dict(payload: Any) -> dict[str, Any]:
-    """Serialize dataclasses to plain dict with existing field names."""
-    return asdict(payload)

@@ -50,8 +50,6 @@ GENERIC_COLUMNS: tuple[str, ...] = (
     "target",
     "status",
     "details",
-    "severity",
-    "code",
     "vuln_name",
 )
 

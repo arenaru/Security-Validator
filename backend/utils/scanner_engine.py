@@ -119,26 +119,3 @@ def iter_scanning_engine_results(targets_list, selected_scans, timeout=None, par
                         yield m, None, TimeoutError(f"job timeout of {timeout}s exceeded")
     finally:
         executor.shutdown(wait=False, cancel_futures=True)
-
-
-def start_scanning_engine(targets_list, selected_scans):
-    """
-    Menjalankan scanning paralel dan mengembalikan dictionary berdasarkan Scan Type.
-    Format Return: { "SSL Certificate Check": [...data...], "HSTS...": ... }
-    """
-
-    scan_results = {}
-
-    for scan_type, payload, err in iter_scanning_engine_results(
-        targets_list,
-        selected_scans,
-    ):
-        if err is not None:
-            scan_results[scan_type] = None
-            print(f"[Error] {scan_type} failed: {err}")
-            import traceback
-            traceback.print_exc()
-            continue
-        scan_results[scan_type] = payload
-
-    return scan_results
