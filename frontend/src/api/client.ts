@@ -50,6 +50,10 @@ type ApiProgress = {
   totalModules?: number
   total_modules?: number
   percent?: number
+  completedBatches?: number
+  completed_batches?: number
+  totalBatches?: number
+  total_batches?: number
 }
 
 type ApiScanAcceptedResponse = {
@@ -91,6 +95,8 @@ function normalizeProgress(progress: ApiProgress): ScanStatusResponse['progress'
     completedModules,
     totalModules,
     percent,
+    completedBatches: progress.completedBatches ?? progress.completed_batches ?? 0,
+    totalBatches: progress.totalBatches ?? progress.total_batches ?? 1,
   }
 }
 

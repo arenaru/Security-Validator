@@ -76,6 +76,13 @@ export function ProgressBar({
             {progress.completedModules} dari {progress.totalModules} modul selesai
           </span>
 
+          {progress.totalBatches > 1 && (
+            <span className="text-xs text-slate-400">
+              Batch {Math.min(progress.completedBatches + 1, progress.totalBatches)} dari{' '}
+              {progress.totalBatches}
+            </span>
+          )}
+
           {scanId && (
             <span className="text-[11px] font-mono text-slate-500 bg-slate-800/70 px-2 py-0.5 rounded">
               #{scanId.slice(0, 8)}

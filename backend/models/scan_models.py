@@ -24,7 +24,13 @@ MODULE_NAMES: tuple[str, ...] = (
     "IP Country Lookup",
 )
 
-MAX_TARGETS_PER_SCAN = 200
+# Targets are scanned in batches of this size. Each batch gets its own
+# pre-flight, resolve and module pass, and its own `timeout_seconds` budget.
+TARGET_BATCH_SIZE = 200
+
+# Absolute ceiling per scan (5 batches). Bounded because every ModuleResult
+# retains its raw payload and the in-memory store keeps jobs for 4 hours.
+MAX_TARGETS_PER_SCAN = 1000
 
 
 class ScanJobStatus(str, Enum):
@@ -85,6 +91,8 @@ class ScanOptions:
 class Progress:
     completed_modules: int
     total_modules: int
+    completed_batches: int = 0
+    total_batches: int = 1
 
     @property
     def percent(self) -> float:
@@ -160,11 +168,23 @@ class ScanJob:
     counts: dict[str, dict[str, int]] = field(default_factory=dict)
     domain_worst: dict[str, Any] = field(default_factory=dict)
     skipped_targets: list[SkippedTarget] = field(default_factory=list)
+    total_batches: int = 1
+    completed_batches: int = 0
+    modules_done_this_batch: int = 0
 
     def progress(self) -> Progress:
-        completed = len(self.results)
-        total = max(len(self.modules), 1)
-        return Progress(completed_modules=completed, total_modules=total)
+        # Counted explicitly rather than derived from len(results): once batch 1
+        # has populated every module key, that count would pin at 100% while
+        # later batches are still running.
+        per_batch = max(len(self.modules), 1)
+        total = per_batch * max(self.total_batches, 1)
+        completed = min(self.completed_batches * per_batch + self.modules_done_this_batch, total)
+        return Progress(
+            completed_modules=completed,
+            total_modules=total,
+            completed_batches=self.completed_batches,
+            total_batches=max(self.total_batches, 1),
+        )
 
     def touch(self) -> None:
         self.updated_at = utc_now()

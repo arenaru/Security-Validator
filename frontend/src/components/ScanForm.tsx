@@ -25,6 +25,7 @@ import {
 import {
   ACCEPTED_FILE_TYPES,
   MAX_TARGETS_PER_SCAN,
+  TARGET_BATCH_SIZE,
   TargetImportError,
   importTargetsFromFile,
   type ImportResult,
@@ -59,6 +60,10 @@ function describeImport(fileName: string, result: ImportResult): ImportStatus {
   const warnings: string[] = []
   if (result.isGeneric) warnings.push('Target dideteksi otomatis, mohon periksa daftar sebelum scan.')
   if (result.exceedsLimit) warnings.push(`Melebihi batas ${MAX_TARGETS_PER_SCAN} target per scan.`)
+  else if (result.hosts.length > TARGET_BATCH_SIZE) {
+    const batches = Math.ceil(result.hosts.length / TARGET_BATCH_SIZE)
+    warnings.push(`Akan diproses bertahap dalam ${batches} batch (${TARGET_BATCH_SIZE} target per batch).`)
+  }
   if (warnings.length) message += ` ${warnings.join(' ')}`
 
   return { tone: warnings.length ? 'warning' : 'success', message, skipped: result.skipped }

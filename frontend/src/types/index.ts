@@ -21,6 +21,9 @@ export interface Progress {
   completedModules: number
   totalModules: number
   percent: number
+  /** Large target lists are scanned in batches; 1 batch for lists under the batch size. */
+  completedBatches: number
+  totalBatches: number
 }
 
 export interface ModuleResult {

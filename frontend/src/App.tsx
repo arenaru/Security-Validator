@@ -84,6 +84,8 @@ function App() {
           completedModules: 0,
           totalModules: modules.length,
           percent: 0,
+          completedBatches: 0,
+          totalBatches: 1,
         },
         results: null,
         errors: [],

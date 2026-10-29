@@ -15,6 +15,7 @@ from backend.models.scan_models import (
     ScanJobStatus,
     ScanOptions,
     SkippedTarget,
+    TARGET_BATCH_SIZE,
 )
 
 
@@ -28,7 +29,10 @@ class ScanCreateRequest:
         if not self.targets:
             raise ValueError("targets must not be empty")
         if len(self.targets) > MAX_TARGETS_PER_SCAN:
-            raise ValueError(f"targets must not exceed {MAX_TARGETS_PER_SCAN} items")
+            raise ValueError(
+                f"targets must not exceed {MAX_TARGETS_PER_SCAN} items "
+                f"(scanned in batches of {TARGET_BATCH_SIZE})"
+            )
         if not self.modules:
             raise ValueError("modules must not be empty")
 

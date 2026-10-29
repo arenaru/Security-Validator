@@ -22,8 +22,11 @@ import type { ImportResult, ParserOutput, SkipReason, TargetParser } from './typ
 
 export type { ImportResult, SkippedEntry, SkipReason, TargetParser } from './types'
 
-/** Backend limit (`MAX_TARGETS_PER_SCAN` in backend/models/scan_models.py). */
-export const MAX_TARGETS_PER_SCAN = 200
+/** Backend absolute ceiling (`MAX_TARGETS_PER_SCAN` in backend/models/scan_models.py). */
+export const MAX_TARGETS_PER_SCAN = 1000
+
+/** Backend batch size (`TARGET_BATCH_SIZE`). Larger lists are scanned in batches, not rejected. */
+export const TARGET_BATCH_SIZE = 200
 
 /** Files above this size are rejected to keep the browser responsive. */
 export const MAX_IMPORT_FILE_BYTES = 50 * 1024 * 1024

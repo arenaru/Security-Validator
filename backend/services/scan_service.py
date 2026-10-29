@@ -7,7 +7,7 @@ from io import BytesIO
 import pandas as pd
 from openpyxl.styles import Font, PatternFill
 
-from backend.models.scan_models import INFORMATIONAL_MODULES, ModuleError, ModuleResult, ResultStatus, ScanJob, ScanJobStatus, ScanOptions, SkippedTarget, TRUE_POSITIVE_STATUSES, utc_now
+from backend.models.scan_models import INFORMATIONAL_MODULES, ModuleError, ModuleResult, ResultStatus, ScanJob, ScanJobStatus, ScanOptions, SkippedTarget, TARGET_BATCH_SIZE, TRUE_POSITIVE_STATUSES, utc_now
 from backend.schemas.scan_schemas import ScanCreateRequest, ScanStatusResponse, ScanSummaryResponse, merge_domain_status, normalize_target_domain
 from backend.utils.report_columns import (
 	GENERIC_COLUMNS,
@@ -93,7 +93,14 @@ class ScanService:
 			skipped_summary = "; ".join(f"{s.target}: {s.reason}" for s in skipped)
 			raise ValueError(f"no valid targets remaining after validation — skipped: {skipped_summary}")
 
-		job = ScanJob(targets=valid_targets, modules=clean_modules, options=options, skipped_targets=skipped)
+		total_batches = max(1, -(-len(valid_targets) // TARGET_BATCH_SIZE))
+		job = ScanJob(
+			targets=valid_targets,
+			modules=clean_modules,
+			options=options,
+			skipped_targets=skipped,
+			total_batches=total_batches,
+		)
 		self.store.save(job)
 		return job
 
@@ -133,57 +140,16 @@ class ScanService:
 		self.store.save(job)
 
 		try:
-			# TCP pre-flight before any HTTP work. Hosts that silently drop
-			# packets otherwise cost a full connect timeout per scheme per
-			# module, which is what pushes large subdomain lists (often inflated
-			# by wildcard DNS) past the job deadline. A TCP connect needs no TLS
-			# handshake, so it can run at much higher concurrency than the scan
-			# modules themselves.
-			probes = probe_targets(job.targets, max_threads=_PORT_PROBE_THREADS)
-			reachable, unreachable = partition_by_reachability(job.targets, probes)
-
-			for target, reason in unreachable:
-				job.skipped_targets.append(SkippedTarget(target=target, reason=reason))
-			if unreachable:
-				job.touch()
-				self.store.save(job)
-
-			if not reachable:
-				job.status = ScanJobStatus.DONE
-				return job
-
-			resolved_targets = resolve_targets(
-				reachable,
-				max_threads=max(1, job.options.parallelism),
-				probes=probes,
-			)
-
-			for module_name, payload, err in iter_scanning_engine_results(
-				resolved_targets,
-				job.modules,
-				timeout=job.options.timeout_seconds,
-				parallelism=max(1, job.options.parallelism),
-			):
-				if err is not None:
-					job.results[module_name] = []
-					job.counts[module_name] = {"secure": 0, "warning": 0, "insecure": 0, "error": 1, "info": 0}
-					job.errors.append(ModuleError(module=module_name, message=str(err)[:200]))
-					job.touch()
-					self.store.save(job)
-					continue
-
-				normalized, module_errors, module_counts = self._normalize_module_output(module_name, payload)
-				job.results[module_name] = normalized
-				job.counts[module_name] = module_counts
-				job.errors.extend(module_errors)
-				if module_name not in INFORMATIONAL_MODULES:
-					for item in normalized:
-						if item.status not in TRUE_POSITIVE_STATUSES:
-							continue
-						domain = normalize_target_domain(item.target)
-						if domain:
-							current = job.domain_worst.get(domain, ResultStatus.INFO)
-							job.domain_worst[domain] = merge_domain_status(current, item.status)
+			# Targets are scanned in batches so a list larger than one batch is
+			# still accepted. Pre-flight runs per batch rather than once up
+			# front, so the first batch starts scanning without waiting on DNS
+			# for the whole list.
+			for start in range(0, len(job.targets), TARGET_BATCH_SIZE):
+				batch = job.targets[start:start + TARGET_BATCH_SIZE]
+				job.modules_done_this_batch = 0
+				self._run_batch(job, batch)
+				job.completed_batches += 1
+				job.modules_done_this_batch = 0
 				job.touch()
 				self.store.save(job)
 
@@ -203,6 +169,79 @@ class ScanService:
 			self.store.save(job)
 
 		return job
+
+	def _run_batch(self, job: ScanJob, batch: list[str]) -> None:
+		"""
+		Scan one batch of targets, merging its output into the job.
+
+		Results, counts and errors accumulate across batches, so every write
+		here merges rather than assigns; assigning would discard earlier
+		batches. Each batch gets its own `timeout_seconds` budget.
+		"""
+		# TCP pre-flight before any HTTP work. Hosts that silently drop packets
+		# otherwise cost a full connect timeout per scheme per module, which is
+		# what pushes large subdomain lists (often inflated by wildcard DNS)
+		# past the job deadline. A TCP connect needs no TLS handshake, so it can
+		# run at much higher concurrency than the scan modules themselves.
+		probes = probe_targets(batch, max_threads=_PORT_PROBE_THREADS)
+		reachable, unreachable = partition_by_reachability(batch, probes)
+
+		for target, reason in unreachable:
+			job.skipped_targets.append(SkippedTarget(target=target, reason=reason))
+		if unreachable:
+			job.touch()
+			self.store.save(job)
+
+		# Nothing reachable in this batch is not fatal for the scan; later
+		# batches may still have live hosts.
+		if not reachable:
+			return
+
+		resolved_targets = resolve_targets(
+			reachable,
+			max_threads=max(1, job.options.parallelism),
+			probes=probes,
+		)
+
+		for module_name, payload, err in iter_scanning_engine_results(
+			resolved_targets,
+			job.modules,
+			timeout=job.options.timeout_seconds,
+			parallelism=max(1, job.options.parallelism),
+		):
+			job.modules_done_this_batch += 1
+
+			if err is not None:
+				# setdefault, not assignment: a module failing in this batch
+				# must not erase rows it returned in an earlier one.
+				job.results.setdefault(module_name, [])
+				counts = job.counts.setdefault(
+					module_name, {"secure": 0, "warning": 0, "insecure": 0, "error": 0, "info": 0}
+				)
+				counts["error"] += 1
+				job.errors.append(ModuleError(module=module_name, message=str(err)[:200]))
+				job.touch()
+				self.store.save(job)
+				continue
+
+			normalized, module_errors, module_counts = self._normalize_module_output(module_name, payload)
+			job.results.setdefault(module_name, []).extend(normalized)
+			counts = job.counts.setdefault(
+				module_name, {"secure": 0, "warning": 0, "insecure": 0, "error": 0, "info": 0}
+			)
+			for status_name, value in module_counts.items():
+				counts[status_name] = counts.get(status_name, 0) + value
+			job.errors.extend(module_errors)
+			if module_name not in INFORMATIONAL_MODULES:
+				for item in normalized:
+					if item.status not in TRUE_POSITIVE_STATUSES:
+						continue
+					domain = normalize_target_domain(item.target)
+					if domain:
+						current = job.domain_worst.get(domain, ResultStatus.INFO)
+						job.domain_worst[domain] = merge_domain_status(current, item.status)
+			job.touch()
+			self.store.save(job)
 
 	def get_status(self, scan_id: str, include_results: bool = True) -> ScanStatusResponse:
 		job = self.require_job(scan_id)
