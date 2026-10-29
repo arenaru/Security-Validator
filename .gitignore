@@ -65,6 +65,9 @@ VA Scan Report
 *.txt
 .streamlit/
 
+# Scanner reports used for target import (contain real client data)
+sample/
+
 # Misc
 .git
 .gitignore

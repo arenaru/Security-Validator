@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
@@ -12,5 +13,10 @@ export default defineConfig({
         changeOrigin: true,
       },
     },
+  },
+  test: {
+    // happy-dom provides DOMParser for the XML/HTML report parsers
+    environment: 'happy-dom',
+    include: ['src/**/*.test.ts'],
   },
 })

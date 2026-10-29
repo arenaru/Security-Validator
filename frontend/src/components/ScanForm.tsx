@@ -1,6 +1,8 @@
-import { useState, useId } from 'react'
+import { useState, useId, useRef } from 'react'
 import {
+  AlertTriangle,
   Check,
+  CheckCircle2,
   ChevronDown,
   ChevronUp,
   Cookie,
@@ -12,6 +14,7 @@ import {
   Shield,
   Sparkles,
   Trash2,
+  Upload,
 } from 'lucide-react'
 import {
   MODULE_CATEGORIES,
@@ -19,6 +22,83 @@ import {
   SCAN_PRESETS,
   type ScanPreset,
 } from '../types'
+import {
+  ACCEPTED_FILE_TYPES,
+  MAX_TARGETS_PER_SCAN,
+  TargetImportError,
+  importTargetsFromFile,
+  type ImportResult,
+  type SkippedEntry,
+  type SkipReason,
+} from '../utils/targetImport'
+
+interface ImportStatus {
+  tone: 'success' | 'warning' | 'error'
+  message: string
+  skipped?: SkippedEntry[]
+}
+
+const SKIP_LABELS: Record<SkipReason, string> = {
+  duplicate: 'Duplikat',
+  status: 'Status tidak aktif',
+  group: 'Baris grup / apex',
+  reference: 'Situs referensi',
+  invalid: 'Bukan host valid',
+}
+
+/** Max entries listed per skip reason; the rest are summarized as "+N lainnya". */
+const MAX_SKIPPED_SHOWN = 20
+
+/** Build the status line shown under the textarea after a file import. */
+function describeImport(fileName: string, result: ImportResult): ImportStatus {
+  if (result.hosts.length === 0) {
+    return { tone: 'error', message: `Tidak ada target yang ditemukan di ${fileName}.`, skipped: result.skipped }
+  }
+
+  let message = `${result.hosts.length} target diimpor dari ${result.format.label}.`
+  const warnings: string[] = []
+  if (result.isGeneric) warnings.push('Target dideteksi otomatis, mohon periksa daftar sebelum scan.')
+  if (result.exceedsLimit) warnings.push(`Melebihi batas ${MAX_TARGETS_PER_SCAN} target per scan.`)
+  if (warnings.length) message += ` ${warnings.join(' ')}`
+
+  return { tone: warnings.length ? 'warning' : 'success', message, skipped: result.skipped }
+}
+
+/** Collapsible list of entries that were found in the file but not imported, grouped by reason. */
+function SkippedList({ entries }: { entries: SkippedEntry[] }) {
+  const groups = new Map<SkipReason, SkippedEntry[]>()
+  for (const entry of entries) groups.set(entry.reason, [...(groups.get(entry.reason) ?? []), entry])
+
+  return (
+    <details className="text-xs text-slate-400 mt-1.5">
+      <summary className="cursor-pointer hover:text-slate-200">Lihat {entries.length} entri yang dilewati</summary>
+      <dl className="mt-1.5 space-y-1.5 pl-3 border-l border-slate-800">
+        {[...groups].map(([reason, items]) => (
+          <div key={reason}>
+            <dt className="font-semibold text-slate-300">
+              {SKIP_LABELS[reason]} ({items.length})
+            </dt>
+            <dd className="font-mono break-all">
+              {items
+                .slice(0, MAX_SKIPPED_SHOWN)
+                .map(item => (item.detail ? `${item.value} (${item.detail})` : item.value))
+                .join(', ')}
+              {items.length > MAX_SKIPPED_SHOWN && ` +${items.length - MAX_SKIPPED_SHOWN} lainnya`}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </details>
+  )
+}
+
+function describeImportError(error: unknown): string {
+  if (error instanceof TargetImportError) {
+    if (error.code === 'too-large') return 'File terlalu besar (maksimal 50 MB).'
+    if (error.code === 'binary') return 'File biner (mis. PDF) belum didukung. Gunakan ekspor HTML, XML, JSON, CSV, TXT, atau DOCX.'
+  }
+  return 'Gagal membaca file.'
+}
 
 interface ScanFormProps {
   onSubmit: (targets: string[], modules: string[]) => void
@@ -41,7 +121,13 @@ export function ScanForm({
   const [collapsed, setCollapsed] = useState(false)
   const [activePreset, setActivePreset] = useState<string>('full')
 
+  const [importStatus, setImportStatus] = useState<ImportStatus | null>(null)
+  const [isImporting, setIsImporting] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
   const formId = useId()
+  const fileInputId = `${formId}-file`
+  const importStatusId = `${formId}-import-status`
 
   const validTargets = targetsInput
     .split(/\r?\n/)
@@ -83,10 +169,32 @@ export function ScanForm({
 
   const handleLoadSample = () => {
     setTargetsInput('example.com\ncloudflare.com')
+    setImportStatus(null)
   }
 
   const handleClearTargets = () => {
     setTargetsInput('')
+    setImportStatus(null)
+  }
+
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.currentTarget
+    const file = input.files?.[0]
+    // Reset so selecting the same file again still triggers onChange
+    input.value = ''
+    if (!file) return
+
+    setIsImporting(true)
+    try {
+      const result = await importTargetsFromFile(file)
+      // Import replaces the current list; the user reviews it and starts the scan manually
+      if (result.hosts.length > 0) setTargetsInput(result.hosts.join('\n'))
+      setImportStatus(describeImport(file.name, result))
+    } catch (error) {
+      setImportStatus({ tone: 'error', message: describeImportError(error) })
+    } finally {
+      setIsImporting(false)
+    }
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -191,6 +299,27 @@ export function ScanForm({
               Target Pengujian (Domain / URL)
             </label>
             <div className="flex items-center gap-2">
+              <input
+                ref={fileInputRef}
+                id={fileInputId}
+                type="file"
+                accept={ACCEPTED_FILE_TYPES}
+                onChange={handleImportFile}
+                className="sr-only"
+                tabIndex={-1}
+                aria-hidden="true"
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isImporting}
+                aria-describedby={importStatus ? importStatusId : undefined}
+                className="text-[11px] text-blue-400 hover:text-blue-300 disabled:opacity-50 disabled:cursor-wait inline-flex items-center gap-1 transition-colors"
+                title="Impor target dari laporan scanner (Acunetix, Burp, Nessus, Nmap, ZAP, atau file teks)"
+              >
+                {isImporting ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
+                {isImporting ? 'Mengimpor...' : 'Impor File'}
+              </button>
               <button
                 type="button"
                 onClick={handleLoadSample}
@@ -232,6 +361,28 @@ export function ScanForm({
             >
               {validTargets.length} target terdeteksi
             </span>
+          </div>
+
+          <div id={importStatusId} role="status" aria-live="polite">
+            {importStatus && (
+              <p
+                className={`text-xs flex items-start gap-1.5 rounded-md border px-2.5 py-2 ${
+                  importStatus.tone === 'success'
+                    ? 'text-emerald-300 border-emerald-500/30 bg-emerald-500/10'
+                    : importStatus.tone === 'warning'
+                      ? 'text-amber-300 border-amber-500/30 bg-amber-500/10'
+                      : 'text-red-300 border-red-500/30 bg-red-500/10'
+                }`}
+              >
+                {importStatus.tone === 'success' ? (
+                  <CheckCircle2 size={14} className="shrink-0 mt-px" aria-hidden="true" />
+                ) : (
+                  <AlertTriangle size={14} className="shrink-0 mt-px" aria-hidden="true" />
+                )}
+                <span>{importStatus.message}</span>
+              </p>
+            )}
+            {importStatus?.skipped && importStatus.skipped.length > 0 && <SkippedList entries={importStatus.skipped} />}
           </div>
         </div>
 
